@@ -223,10 +223,10 @@ def run_resume_pipeline(
     template_path = root_dir / "latex-template" / "main.tex"
     current_jd_path = root_dir / "current-jd.md"
     current_tex_path = root_dir / "latex-work" / "current.tex"
-    output_dir = root_dir / "career-ops" / "output"
+    output_dir = root_dir / "Scan-job" / "output"
     pdf_path = output_dir / "main.pdf"
     log_path = output_dir / "main.log"
-    cv_path = root_dir / "career-ops" / "cv.md"
+    cv_path = root_dir / "Scan-job" / "cv.md"
 
     if not template_path.exists():
         raise FileNotFoundError(f"LaTeX template not found: {template_path}")

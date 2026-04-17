@@ -1,22 +1,22 @@
-# Career-Ops Task 5 整合說明
+# Scan-job Task 5 整合說明
 
-這個資料夾是 `Daily_Task` 裡專門給 `Career-Ops` 用的隔離區。
+這個資料夾是 `Daily_Task` 裡專門給 `Scan-job` 用的隔離區。
 
 ## 目標
 
-- 把 `Career-Ops` 當成 `Daily_Task` 裡的另一個 task 來接。
+- 把 `Scan-job` 當成 `Daily_Task` 裡的另一個 task 來接。
 - 不影響既有 `Task 1 / Task 2 / Task 3 / Task SNR` 的資料夾與執行方式。
-- 所有跟 `Career-Ops` 有關的 clone、設定、輸出、客製化，都盡量留在 `Career_ops/` 下面。
+- 所有跟 `Scan-job` 有關的 clone、設定、輸出、客製化，都盡量留在 `Job Searching/` 下面。
 - 以繁體中文做為這個整合層的預設說明語言。
 
 ## 建議目錄結構
 
 ```text
 Daily_Task/
-├── Career_ops/
+├── Job Searching/
 │   ├── cli.py
 │   ├── README.zh-TW.md
-│   └── career-ops/              # 上游 repo，之後 clone 到這裡
+│   └── Scan-job/                # 本地 project workspace（來源仍是 Career-Ops upstream）
 │       ├── config/
 │       ├── docs/
 │       ├── modes/
@@ -33,8 +33,8 @@ Daily_Task/
 這樣做有三個好處：
 
 1. `Daily_Task` 外層只需要新增 `Task 5` 路由，改動面很小。
-2. `Career-Ops` 上游 repo 可以原樣保留，未來要更新、回滾、比對 upstream 都比較容易。
-3. 之後如果你決定不要這個 task，只要移除 `Career_ops/` 和一小段路由即可。
+2. `Career-Ops` 上游 repo 仍然可以作為來源參考，未來要更新、回滾、比對 upstream 都比較容易。
+3. 之後如果你決定不要這個 task，只要移除 `Job Searching/` 和一小段路由即可。
 
 ## 第一次接入建議流程
 
@@ -42,17 +42,17 @@ Daily_Task/
 2. 執行 `task 5 bootstrap --install`
 3. 執行 `task 5 doctor`
 4. 依照 doctor 提示補齊這些檔案：
-   - `Career_ops/career-ops/cv.md`
-   - `Career_ops/career-ops/config/profile.yml`
-   - `Career_ops/career-ops/portals.yml`
-5. 如果你要用 dashboard，再進 `Career_ops/career-ops/dashboard/` build Go TUI
+   - `Job Searching/Scan-job/cv.md`
+   - `Job Searching/Scan-job/config/profile.yml`
+   - `Job Searching/Scan-job/portals.yml`
+5. 如果你要用 dashboard，再進 `Job Searching/Scan-job/dashboard/` build Go TUI
 
 ## 繁體中文策略
 
 目前這一層先做兩件事：
 
 1. `Task 5` 的本地入口與說明都用繁體中文。
-2. `Career-Ops` 上游 repo 內的 `modes/` 維持英文，避免額外維護一套繁中 mode 分支。
+2. `Career-Ops` upstream 來源內的 `modes/` 維持英文，避免額外維護一套繁中 mode 分支。
 
 這樣的好處是：
 
@@ -63,13 +63,13 @@ Daily_Task/
 換句話說，語言分工會是：
 
 - `Daily_Task` 的 `Task 5` 入口：繁體中文
-- `Career_ops/README.zh-TW.md` 與操作說明：繁體中文
-- `Career_ops/career-ops/modes/*.md`：英文
+- `Job Searching/README.zh-TW.md` 與操作說明：繁體中文
+- `Job Searching/Scan-job/modes/*.md`：英文
 - 你給 Codex/terminal agent 的操作指令：可以用繁體中文，但需要遵守英文 `modes/` 的結構與語意
 
 ## 建議的繁中使用方式
 
-如果你之後在 `Career_ops/career-ops/` 裡直接開 Codex，建議第一句就這樣說：
+如果你之後在 `Job Searching/Scan-job/` 裡直接開 Codex，建議第一句就這樣說：
 
 ```text
 請以繁體中文和我協作，但保留 Career-Ops 的 modes/ 為英文；沿用既有腳本與流程，只有在必要時才修改上游檔案。
@@ -78,7 +78,7 @@ Daily_Task/
 如果你想讓它更偏向 `Daily_Task` 的操作習慣，可以再補一段：
 
 ```text
-請把這個 repo 視為 Daily_Task 的 Task 5，所有本地資料與輸出都留在 Career_ops/career-ops 下面，不要外溢到其他 task。
+請把這個 repo 視為 Daily_Task 的 Task 5，所有本地資料與輸出都留在 Job Searching/Scan-job 下面，不要外溢到其他 task。
 ```
 
 ## 目前這層的主工作流
@@ -136,7 +136,7 @@ Daily_Task/
 
 ## 目前這層的邊界
 
-- `Career-Ops` 上游 repo、`cv.md`、`config/profile.yml`、`portals.yml`、`article-digest.md` 都留在 `Career_ops/career-ops` 下面集中管理
+- `Scan-job` 本地 workspace 裡的 `cv.md`、`config/profile.yml`、`portals.yml`、`article-digest.md` 都集中在 `Job Searching/Scan-job` 下面管理
 - 不打算把 upstream `modes/*.md` 全面翻成繁中，會維持英文 mode prompt，相容 Codex / terminal 工作流
 - 這層主打的是本地 workflow orchestration，不是去改寫 upstream 的整套 agent 架構
 - `AI_CLI=codex|claude|qwen` 這類 provider abstraction 仍然是後續擴充，不是這一版 Task 5 的目標
@@ -146,4 +146,4 @@ Daily_Task/
 
 - 把 `Task 5` 做成比較像 job ops workspace 的本地工作台
 - 讓主選單對齊你的日常流程，而不是只對齊 repo 維護
-- 保留 upstream `Career-Ops` 的資料夾隔離與 mode 相容性
+- 保留 upstream `Career-Ops` 的來源相容性，同時把本地 project 名稱統一成 `Scan-job`

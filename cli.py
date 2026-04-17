@@ -16,7 +16,7 @@ import task5_resume_pipeline as resume_pipeline
 
 
 ROOT_DIR = Path(__file__).resolve().parent
-UPSTREAM_DIR = ROOT_DIR / "career-ops"
+UPSTREAM_DIR = ROOT_DIR / "Scan-job"
 GUIDE_PATH = ROOT_DIR / "README.zh-TW.md"
 
 CommandRunner = Callable[[list[str], Path], int]
@@ -175,7 +175,7 @@ def _dashboard_path() -> Path:
 def _help_text() -> str:
     return "\n".join(
         [
-            "Task 5: Career-Ops Workflow",
+            "Task 5: Scan-job Workflow",
             "用法:",
             "  task 5 scan                    掃描新職缺並更新 pipeline / scan history",
             "  task 5 clean                   清理 pipeline 重複項並刷新 dashboard",
@@ -195,7 +195,7 @@ def _help_text() -> str:
 def _interactive_menu(runner: CommandRunner) -> int:
     last_exit_code = 0
     while True:
-        print("Task 5: Career-Ops Workflow")
+        print("Task 5: Scan-job Workflow")
         print("=================================")
         print("1. Scan new jobs - 找新職缺並更新 pipeline")
         print("2. Process top pipeline job - 處理第一筆待辦職缺並產生 report + outputs")
@@ -602,13 +602,13 @@ def _repo_ready() -> bool:
 
 
 def _print_repo_not_ready() -> None:
-    print(f"尚未找到 Career-Ops repo: {_repo_dir()}")
+    print(f"尚未找到 Scan-job repo: {_repo_dir()}")
     print("先執行 `task 5 bootstrap --install`，再回來跑這個命令。")
 
 
 def _bootstrap_repo(runner: CommandRunner, *, install_dependencies: bool) -> int:
     if _repo_ready():
-        print(f"Career-Ops repo 已存在: {_repo_dir()}")
+        print(f"Scan-job repo 已存在: {_repo_dir()}")
     else:
         ROOT_DIR.mkdir(parents=True, exist_ok=True)
         clone_command = ["git", "clone", "https://github.com/santifer/career-ops.git", str(_repo_dir())]

@@ -2,8 +2,11 @@
 __pycache__/
 *.py[cod]
 
-# Keep the upstream Career-Ops workspace local to this machine.
-career-ops/
+# Personal or machine-local files inside the Scan-job workspace.
+Scan-job/.git.legacy-backup-*
+Scan-job/.envrc
+Scan-job/article-digest.md
+Scan-job/cv.md
 
 # Generated resume working files.
 latex-work/

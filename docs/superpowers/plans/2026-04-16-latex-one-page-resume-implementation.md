@@ -4,7 +4,7 @@
 
 **Goal:** Add a local `task 5 resume` workflow that renders the fixed LaTeX template into a single current working `.tex`, compiles a single current PDF, reads page count from the LaTeX log, and retries with progressively tighter fitting rules until it reaches one page or fails cleanly.
 
-**Architecture:** Keep the implementation inside the `Job Searching` integration layer and leave `career-ops` as the factual data source plus output directory. Use a small Python pipeline module for data loading, LaTeX rendering, compilation, page-count parsing, and fitting decisions, then expose it through `Job Searching/cli.py`.
+**Architecture:** Keep the implementation inside the `Job Searching` integration layer and leave `Scan-job` as the factual data source plus output directory. Use a small Python pipeline module for data loading, LaTeX rendering, compilation, page-count parsing, and fitting decisions, then expose it through `Job Searching/cli.py`.
 
 **Tech Stack:** Python 3.14, local `latexmk`/`pdfLaTeX`, pytest, existing Task 5 CLI integration.
 
@@ -49,7 +49,7 @@ Cover:
 - [ ] **Step 2: Implement resume data loading**
 
 Read:
-- `career-ops/cv.md`
+- `Scan-job/cv.md`
 - `current-jd.md` or an explicit JD file
 
 Parse:
@@ -76,7 +76,7 @@ Render the tokenized template into `latex-work/current.tex` with safe LaTeX esca
 
 - [ ] **Step 5: Implement compilation and log parsing**
 
-Compile with `latexmk -pdf -jobname=main -outdir=career-ops/output latex-work/current.tex` and parse page count from `career-ops/output/main.log`.
+Compile with `latexmk -pdf -jobname=main -outdir=Scan-job/output latex-work/current.tex` and parse page count from `Scan-job/output/main.log`.
 
 ### Task 3: Expose the workflow in the Task 5 CLI
 
@@ -127,7 +127,7 @@ Run:
 
 Expected:
 - `latex-work/current.tex` exists
-- `career-ops/output/main.pdf` exists
+- `Scan-job/output/main.pdf` exists
 - page count is reported
 
 - [ ] **Step 3: Record any remaining gaps**

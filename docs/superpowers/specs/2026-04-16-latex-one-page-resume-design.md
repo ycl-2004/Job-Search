@@ -2,7 +2,7 @@
 
 Date: 2026-04-16
 Project root: `/Users/yichenlin/Desktop/Daily_Task/Job Searching`
-Related repo: `/Users/yichenlin/Desktop/Daily_Task/Job Searching/career-ops`
+Related repo: `/Users/yichenlin/Desktop/Daily_Task/Job Searching/Scan-job`
 
 ## Goal
 
@@ -99,7 +99,7 @@ Suggested structure:
   latex-work/
     current.tex
   current-jd.md
-  career-ops/
+  Scan-job/
     cv.md
     output/
       main.pdf
@@ -121,11 +121,11 @@ Suggested structure:
   - normalized current job description for the active application;
   - overwritten every run.
 
-- `career-ops/output/main.pdf`
+- `Scan-job/output/main.pdf`
   - final PDF artifact for the current application;
   - overwritten every run.
 
-- `career-ops/output/main.log`
+- `Scan-job/output/main.log`
   - latest compilation log;
   - overwritten every run.
 
@@ -147,13 +147,13 @@ The normalized result is written to `current-jd.md`.
 
 Primary fact source remains:
 
-- `/Users/yichenlin/Desktop/Daily_Task/Job Searching/career-ops/cv.md`
+- `/Users/yichenlin/Desktop/Daily_Task/Job Searching/Scan-job/cv.md`
 
 Optional supporting facts may also come from:
 
 - `article-digest.md`
 - `modes/_profile.md`
-- existing structured profile/config files inside `career-ops/`
+- existing structured profile/config files inside `Scan-job/`
 
 These sources provide factual material only. The generator may rephrase, reorder, compress, or omit content, but must not invent facts.
 
@@ -172,8 +172,8 @@ The fixed LaTeX template provides:
 The workflow produces only the current version of the application package:
 
 - `latex-work/current.tex`
-- `career-ops/output/main.pdf`
-- `career-ops/output/main.log`
+- `Scan-job/output/main.pdf`
+- `Scan-job/output/main.log`
 - `current-jd.md`
 
 There is no per-job output archive in this first version.
@@ -230,7 +230,7 @@ This budget is a starting point only. The real acceptance gate is still final PD
 
 ### Step 2. Generate structured resume content
 
-- Read factual source material from `career-ops/cv.md` and optional supporting files.
+- Read factual source material from `Scan-job/cv.md` and optional supporting files.
 - Extract the strongest matching facts for the current JD.
 - Produce structured content for:
   - header;
@@ -257,20 +257,20 @@ This file is fully overwritten on every run.
 Compile with:
 
 ```bash
-latexmk -pdf -jobname=main -outdir=career-ops/output latex-work/current.tex
+latexmk -pdf -jobname=main -outdir=Scan-job/output latex-work/current.tex
 ```
 
 This ensures:
 
-- generated PDF is always `career-ops/output/main.pdf`;
-- generated log is always `career-ops/output/main.log`.
+- generated PDF is always `Scan-job/output/main.pdf`;
+- generated log is always `Scan-job/output/main.log`.
 
 ### Step 5. Check page count
 
 Read page count from the compiler log line that looks like:
 
 ```text
-Output written on career-ops/output/main.pdf (1 page, ...)
+Output written on Scan-job/output/main.pdf (1 page, ...)
 ```
 
 This is the preferred page-count source in version one because:
@@ -451,7 +451,7 @@ Responsibilities:
 
 Responsibilities:
 
-- read `career-ops/output/main.log`;
+- read `Scan-job/output/main.log`;
 - parse the `Output written on ... (N page...)` line;
 - return the detected page count.
 
