@@ -1,4 +1,10 @@
 .DS_Store
 __pycache__/
 *.py[cod]
-career-ops/.git.legacy-backup-*
+
+# Keep the upstream Career-Ops workspace local to this machine.
+career-ops/
+
+# Generated resume working files.
+latex-work/
+current-jd.md

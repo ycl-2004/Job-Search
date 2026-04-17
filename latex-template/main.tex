@@ -1,0 +1,85 @@
+\documentclass[10pt,a4paper]{article}
+
+\usepackage[margin=0.48in]{geometry}
+\usepackage{xcolor}
+
+\definecolor{linkblue}{HTML}{4A6A8A}
+\definecolor{main}{HTML}{163A70}
+\definecolor{text}{HTML}{222222}
+
+\usepackage[colorlinks=true, urlcolor=linkblue]{hyperref}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{ragged2e}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+
+\pagestyle{empty}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0pt}
+
+\setlist[itemize]{
+    leftmargin=1.15em,
+    itemsep=<<ITEMSEP>>,
+    topsep=<<TOPSEP>>,
+    parsep=0pt,
+    partopsep=0pt
+}
+
+\color{text}
+
+\titleformat{\section}
+  {\large\bfseries\color{main}}
+  {}
+  {0em}
+  {}
+  [\vspace{0.15em}\color{main}\titlerule]
+
+\titlespacing*{\section}{0pt}{<<SECTION_TOP_SPACING>>}{<<SECTION_BOTTOM_SPACING>>}
+
+\newcommand{\resumeheading}[2]{
+  \begin{tabularx}{\textwidth}{@{}X>{\raggedleft\arraybackslash}p{0.35\textwidth}@{}}
+    #1 & #2
+  \end{tabularx}
+  \vspace{-2pt}
+}
+
+\newcommand{\entryline}[2]{
+  \textbf{#1} \hfill \textbf{#2}\par
+  \vspace{-1pt}
+}
+
+\newcommand{\projectline}[3]{
+  \textbf{#1} \hfill \textbf{#2 \;|\; #3}\par
+  \vspace{-1pt}
+}
+
+\newcommand{\blockspace}{\vspace{<<BLOCKSPACE>>}}
+
+\begin{document}
+<<BODY_FONT_COMMAND>>
+
+\begin{center}
+    {\fontsize{19}{21}\selectfont \textbf{<<HEADER_NAME>>}}\\[4pt]
+    \textbf{<<HEADER_PRONOUNS>>} \quad $|$ \quad \textbf{<<HEADER_PHONE>>} \quad $|$ \quad
+    \href{mailto:<<HEADER_EMAIL>>}{\textbf{<<HEADER_EMAIL>>}} \quad $|$ \quad
+    \href{<<HEADER_LINKEDIN_URL>>}{\textbf{<<HEADER_LINKEDIN_LABEL>>}}
+\end{center}
+
+<<SUMMARY_SECTION>>
+
+<<SKILLS_SECTION>>
+
+<<EDUCATION_SECTION>>
+
+<<WORK_SECTION>>
+
+<<PROJECTS_SECTION>>
+
+<<DESIGN_TEAM_SECTION>>
+
+<<RESEARCH_SECTION>>
+
+\end{document}
