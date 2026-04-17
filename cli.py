@@ -20,6 +20,7 @@ UPSTREAM_DIR = ROOT_DIR / "Scan-job"
 GUIDE_PATH = ROOT_DIR / "README.zh-TW.md"
 
 CommandRunner = Callable[[list[str], Path], int]
+ProcessOutputMode = str
 
 
 @dataclass(slots=True)
@@ -52,6 +53,13 @@ class ApplicationRecord:
     pdf: str
     report_path: str
     notes: str
+
+
+@dataclass(slots=True)
+class ProcessOutputArtifacts:
+    mode: ProcessOutputMode
+    pdf_success: bool
+    generated_paths: list[Path]
 
 
 class _HTMLTextExtractor(HTMLParser):
@@ -89,7 +97,14 @@ def main(
     if command in {"clean", "pipeline-clean", "clean-pipeline", "清理"}:
         return _clean_pipeline(runner)
     if command in {"process", "process-top", "run-one", "處理"}:
-        return _process_top_pipeline_job(runner)
+        try:
+            output_mode = _parse_process_output_mode(remaining)
+        except ValueError as exc:
+            print(exc)
+            print("")
+            print(_help_text())
+            return 1
+        return _process_top_pipeline_job(runner, output_mode=output_mode)
     if command in {"pipeline", "pipeline-status", "看盤面"}:
         _print_pipeline_status()
         return 0
@@ -179,7 +194,7 @@ def _help_text() -> str:
             "用法:",
             "  task 5 scan                    掃描新職缺並更新 pipeline / scan history",
             "  task 5 clean                   清理 pipeline 重複項並刷新 dashboard",
-            "  task 5 process                 處理最上面的待辦職缺",
+            "  task 5 process [--output html|latex]  處理最上面的待辦職缺",
             "  task 5 pipeline                顯示 pending / processed / latest scan 摘要",
             "  task 5 dashboard               產生並顯示整合總表（job dashboard）",
             "  task 5 outputs                 顯示最新 report / HTML / PDF 與資料路徑",
@@ -198,7 +213,7 @@ def _interactive_menu(runner: CommandRunner) -> int:
         print("Task 5: Scan-job Workflow")
         print("=================================")
         print("1. Scan new jobs - 找新職缺並更新 pipeline")
-        print("2. Process top pipeline job - 處理第一筆待辦職缺並產生 report + outputs")
+        print("2. Process top pipeline job - 處理第一筆待辦職缺並選擇 HTML / LaTeX outputs")
         print("3. View pipeline status - 看 pending / processed / latest scan 結果")
         print("4. View generated outputs - 看最新 reports、HTML/PDF、tracker 路徑")
         print("5. Maintenance / diagnostics - doctor、verify、clean、init、repo path、help")
@@ -215,7 +230,11 @@ def _interactive_menu(runner: CommandRunner) -> int:
         if choice == "1":
             last_exit_code = _scan_new_jobs([], runner)
         elif choice == "2":
-            last_exit_code = _process_top_pipeline_job(runner)
+            output_mode = _prompt_process_output_mode()
+            if output_mode is None:
+                last_exit_code = 0
+            else:
+                last_exit_code = _process_top_pipeline_job(runner, output_mode=output_mode)
         elif choice == "3":
             _print_pipeline_status()
             last_exit_code = 0
@@ -450,7 +469,47 @@ def _show_dashboard() -> None:
     print(dashboard_path.read_text(encoding="utf-8"))
 
 
-def _process_top_pipeline_job(runner: CommandRunner) -> int:
+def _parse_process_output_mode(args: list[str]) -> ProcessOutputMode:
+    if not args:
+        return "html"
+
+    if len(args) == 2 and args[0] == "--output":
+        mode = args[1].strip().lower()
+    elif len(args) == 1 and args[0].startswith("--output="):
+        mode = args[0].split("=", 1)[1].strip().lower()
+    else:
+        raise ValueError("Usage: task 5 process [--output html|latex]")
+
+    if mode in {"html", "latex"}:
+        return mode
+
+    raise ValueError("Output backend must be one of: html, latex")
+
+
+def _prompt_process_output_mode() -> ProcessOutputMode | None:
+    while True:
+        print("Choose output backend")
+        print("---------------------------------")
+        print("1. HTML -> PDF (current default)")
+        print("2. LaTeX one-page PDF")
+        print("b. Back")
+        raw_choice = _safe_input("Select output backend: ")
+        if raw_choice is None:
+            return None
+
+        choice = raw_choice.strip().lower()
+        if choice in {"1", "html"}:
+            return "html"
+        if choice in {"2", "latex", "tex"}:
+            return "latex"
+        if choice in {"b", "back", "q", "quit", "exit"}:
+            return None
+
+        print("Invalid output backend. Please choose html or latex.")
+        print("")
+
+
+def _process_top_pipeline_job(runner: CommandRunner, *, output_mode: ProcessOutputMode = "html") -> int:
     if not _repo_ready():
         _print_repo_not_ready()
         return 1
@@ -462,6 +521,7 @@ def _process_top_pipeline_job(runner: CommandRunner) -> int:
 
     top_job = pending_jobs[0]
     print("Processing top pipeline job...")
+    print(f"  Output backend: {output_mode}")
     print(f"  Company: {top_job.company}")
     print(f"  Role: {top_job.title}")
     print(f"  URL: {top_job.url}")
@@ -491,19 +551,16 @@ def _process_top_pipeline_job(runner: CommandRunner) -> int:
     jd_path.write_text(_render_jd_snapshot(posting), encoding="utf-8")
     evaluation = _evaluate_posting(posting)
     report_path.write_text(_render_report(posting, evaluation, report_num, pdf_path), encoding="utf-8")
-    html_path.write_text(_render_tailored_html(posting, evaluation), encoding="utf-8")
-
-    pdf_command = [
-        "npm",
-        "run",
-        "pdf",
-        "--",
-        str(html_path.relative_to(_repo_dir())),
-        str(pdf_path.relative_to(_repo_dir())),
-        f"--format={_paper_format(posting)}",
-    ]
-    pdf_exit_code = runner(pdf_command, _repo_dir())
-    pdf_success = pdf_exit_code == 0
+    output_artifacts = _generate_process_output(
+        posting=posting,
+        evaluation=evaluation,
+        jd_path=jd_path,
+        html_path=html_path,
+        pdf_path=pdf_path,
+        runner=runner,
+        output_mode=output_mode,
+    )
+    pdf_success = output_artifacts.pdf_success
 
     _ensure_applications_tracker()
     tsv_path = _tracker_additions_dir() / f"{report_num:03d}-{company_slug}-{role_slug}.tsv"
@@ -544,14 +601,100 @@ def _process_top_pipeline_job(runner: CommandRunner) -> int:
     print("")
     print("Generated:")
     print(f"- {report_path}")
-    print(f"- {html_path}")
-    print(f"- {pdf_path}")
+    for path in output_artifacts.generated_paths:
+        print(f"- {path}")
     print(f"- {_applications_path()} updated")
     print(f"- {_dashboard_path()} refreshed")
     print("")
     print("Pipeline status:")
     print("Pendientes -> Procesadas")
     return 0
+
+
+def _generate_process_output(
+    *,
+    posting: dict[str, str],
+    evaluation: dict[str, object],
+    jd_path: Path,
+    html_path: Path,
+    pdf_path: Path,
+    runner: CommandRunner,
+    output_mode: ProcessOutputMode,
+) -> ProcessOutputArtifacts:
+    if output_mode == "latex":
+        return _generate_latex_process_output(jd_path=jd_path, pdf_path=pdf_path)
+    return _generate_html_process_output(
+        posting=posting,
+        evaluation=evaluation,
+        html_path=html_path,
+        pdf_path=pdf_path,
+        runner=runner,
+    )
+
+
+def _generate_html_process_output(
+    *,
+    posting: dict[str, str],
+    evaluation: dict[str, object],
+    html_path: Path,
+    pdf_path: Path,
+    runner: CommandRunner,
+) -> ProcessOutputArtifacts:
+    html_path.write_text(_render_tailored_html(posting, evaluation), encoding="utf-8")
+
+    pdf_command = [
+        "npm",
+        "run",
+        "pdf",
+        "--",
+        str(html_path.relative_to(_repo_dir())),
+        str(pdf_path.relative_to(_repo_dir())),
+        f"--format={_paper_format(posting)}",
+    ]
+    pdf_exit_code = runner(pdf_command, _repo_dir())
+    return ProcessOutputArtifacts(
+        mode="html",
+        pdf_success=pdf_exit_code == 0,
+        generated_paths=[html_path, pdf_path],
+    )
+
+
+def _generate_latex_process_output(*, jd_path: Path, pdf_path: Path) -> ProcessOutputArtifacts:
+    generated_paths: list[Path] = []
+    tex_output_path = pdf_path.with_suffix(".tex")
+    log_output_path = pdf_path.with_suffix(".log")
+
+    try:
+        result = resume_pipeline.run_resume_pipeline(ROOT_DIR, jd_path=jd_path)
+    except (FileNotFoundError, ValueError) as exc:
+        print(f"LaTeX output failed: {exc}")
+        return ProcessOutputArtifacts(mode="latex", pdf_success=False, generated_paths=[pdf_path])
+
+    if result.current_tex_path.exists():
+        shutil.copyfile(result.current_tex_path, tex_output_path)
+        generated_paths.append(tex_output_path)
+    if result.log_path.exists():
+        shutil.copyfile(result.log_path, log_output_path)
+        generated_paths.append(log_output_path)
+
+    if not result.success:
+        print("LaTeX output failed.")
+        print(f"  Reason: {result.reason}")
+        print(f"  Working TeX: {result.current_tex_path}")
+        print(f"  Log: {result.log_path}")
+        print(f"  Pages: {result.page_count if result.page_count is not None else 'unknown'}")
+        return ProcessOutputArtifacts(
+            mode="latex",
+            pdf_success=False,
+            generated_paths=generated_paths + [pdf_path],
+        )
+
+    shutil.copyfile(result.pdf_path, pdf_path)
+    return ProcessOutputArtifacts(
+        mode="latex",
+        pdf_success=True,
+        generated_paths=generated_paths + [pdf_path],
+    )
 
 
 def _run_resume_command(args: list[str]) -> int:
@@ -1605,7 +1748,14 @@ def _section_body(markdown: str, title: str) -> str:
 
 def _parse_markdown_entries(section_body: str) -> list[dict[str, object]]:
     entries: list[dict[str, object]] = []
-    for match in re.finditer(r"^### (?P<title>.+)\n(?P<body>.*?)(?=^### |\Z)", section_body, flags=re.MULTILINE | re.DOTALL):
+    if not section_body.strip():
+        return entries
+
+    for match in re.finditer(
+        r"^### (?P<title>[^\n]+)\n(?P<body>.*?)(?=^### |\Z)",
+        section_body,
+        flags=re.MULTILINE | re.DOTALL,
+    ):
         title = match.group("title").strip()
         body_lines = [line.rstrip() for line in match.group("body").splitlines()]
         role = ""
