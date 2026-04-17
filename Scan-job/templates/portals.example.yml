@@ -1,5 +1,5 @@
 # Portal Scanner Configuration
-# Used by /career-ops scan to discover new offers automatically.
+# Used by the local Task 5 scan workflow or `npm run scan`.
 #
 # Strategy (3 levels):
 #   1. Playwright → careers_url of each company (real-time, reliable)

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * verify-pipeline.mjs — Health check for career-ops pipeline integrity
+ * verify-pipeline.mjs — Health check for local pipeline integrity
  *
  * Checks:
  * 1. All statuses are canonical (per states.yml)
@@ -18,19 +18,19 @@ import { readFileSync, readdirSync, existsSync, mkdirSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
-const CAREER_OPS = dirname(fileURLToPath(import.meta.url));
-// Support both layouts: data/applications.md (boilerplate) and applications.md (original)
-const APPS_FILE = existsSync(join(CAREER_OPS, 'data/applications.md'))
-  ? join(CAREER_OPS, 'data/applications.md')
-  : join(CAREER_OPS, 'applications.md');
-const ADDITIONS_DIR = join(CAREER_OPS, 'batch/tracker-additions');
-const REPORTS_DIR = join(CAREER_OPS, 'reports');
-const STATES_FILE = existsSync(join(CAREER_OPS, 'templates/states.yml'))
-  ? join(CAREER_OPS, 'templates/states.yml')
-  : join(CAREER_OPS, 'states.yml');
+const PROJECT_ROOT = dirname(fileURLToPath(import.meta.url));
+// Support both layouts: data/applications.md (preferred) and applications.md (legacy)
+const APPS_FILE = existsSync(join(PROJECT_ROOT, 'data/applications.md'))
+  ? join(PROJECT_ROOT, 'data/applications.md')
+  : join(PROJECT_ROOT, 'applications.md');
+const ADDITIONS_DIR = join(PROJECT_ROOT, 'batch/tracker-additions');
+const REPORTS_DIR = join(PROJECT_ROOT, 'reports');
+const STATES_FILE = existsSync(join(PROJECT_ROOT, 'templates/states.yml'))
+  ? join(PROJECT_ROOT, 'templates/states.yml')
+  : join(PROJECT_ROOT, 'states.yml');
 
 // Ensure required directories exist (fresh setup)
-mkdirSync(join(CAREER_OPS, 'data'), { recursive: true });
+mkdirSync(join(PROJECT_ROOT, 'data'), { recursive: true });
 mkdirSync(REPORTS_DIR, { recursive: true });
 
 const CANONICAL_STATUSES = [

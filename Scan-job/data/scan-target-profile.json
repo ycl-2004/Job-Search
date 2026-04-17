@@ -1,0 +1,30 @@
+{
+  "label": "Custom target profile",
+  "focus_keys": [
+    "software",
+    "web3",
+    "ai",
+    "java"
+  ],
+  "focus_labels": [
+    "Software Engineering",
+    "Web3 / Blockchain",
+    "AI / Applied AI",
+    "Java Development"
+  ],
+  "location_keys": [
+    "united-states",
+    "canada"
+  ],
+  "location_labels": [
+    "United States",
+    "Canada"
+  ],
+  "work_mode_keys": [
+    "remote"
+  ],
+  "work_mode_labels": [
+    "Remote"
+  ],
+  "selected_on": "2026-04-17"
+}

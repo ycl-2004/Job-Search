@@ -1,65 +1,47 @@
 # Data Contract
 
-This document defines which files belong to the **system** (auto-updatable) and which belong to the **user** (never touched by updates).
+This directory separates personal working data from reusable system logic.
 
-## User Layer (NEVER auto-updated)
+## User Layer
 
-These files contain your personal data, customizations, and work product. Updates will NEVER modify them.
-
-| File | Purpose |
-|------|---------|
-| `cv.md` | Your CV in markdown |
-| `config/profile.yml` | Your identity, targets, comp range |
-| `modes/_profile.md` | Your archetypes, narrative, negotiation scripts |
-| `article-digest.md` | Your proof points from portfolio |
-| `interview-prep/story-bank.md` | Your accumulated STAR+R stories |
-| `portals.yml` | Your customized company list |
-| `data/applications.md` | Your application tracker |
-| `data/pipeline.md` | Your URL inbox |
-| `data/scan-history.tsv` | Your scan history |
-| `data/follow-ups.md` | Your follow-up history |
-| `reports/*` | Your evaluation reports |
-| `output/*` | Your generated PDFs |
-| `jds/*` | Your saved job descriptions |
-
-## System Layer (safe to auto-update)
-
-These files contain system logic, scripts, templates, and instructions that improve with each release.
+These files are your facts, preferences, or generated work. Cleanup and script
+changes should avoid rewriting them unless the user explicitly asks.
 
 | File | Purpose |
 |------|---------|
-| `modes/_shared.md` | Scoring system, global rules, tools |
-| `modes/oferta.md` | Evaluation mode instructions |
-| `modes/pdf.md` | PDF generation instructions |
-| `modes/scan.md` | Portal scanner instructions |
-| `modes/batch.md` | Batch processing instructions |
-| `modes/apply.md` | Application assistant instructions |
-| `modes/auto-pipeline.md` | Auto-pipeline instructions |
-| `modes/contacto.md` | LinkedIn outreach instructions |
-| `modes/deep.md` | Research prompt instructions |
-| `modes/ofertas.md` | Comparison instructions |
-| `modes/pipeline.md` | Pipeline processing instructions |
-| `modes/project.md` | Project evaluation instructions |
-| `modes/tracker.md` | Tracker instructions |
-| `modes/training.md` | Training evaluation instructions |
-| `modes/patterns.md` | Pattern analysis instructions |
-| `modes/followup.md` | Follow-up cadence instructions |
-| `modes/de/*` | German language modes |
-| `CLAUDE.md` | Agent instructions |
-| `AGENTS.md` | Codex instructions |
+| `cv.md` | Source CV facts in markdown |
+| `config/profile.yml` | Candidate identity, targeting, compensation, locations |
+| `modes/_profile.md` | Personalized framing and archetype notes |
+| `article-digest.md` | Proof points and portfolio evidence |
+| `portals.yml` | Scanner targets and title filters |
+| `interview-prep/*` | Personal interview notes and story bank |
+| `data/applications.md` | Canonical tracker |
+| `data/pipeline.md` | Pending job queue |
+| `data/scan-runs/*` | Daily human-readable scan logs |
+| `data/latest-scan-run.json` | Latest scan summary for menu/status UI |
+| `data/scan-history.tsv` | Dedup history used by the scanner |
+| `reports/*` | Generated evaluation reports |
+| `output/*` | Generated HTML/PDF outputs |
+| `jds/*` | Saved job descriptions |
+
+## System Layer
+
+These files are shared logic and support assets for the local workflow.
+
+| File | Purpose |
+|------|---------|
 | `*.mjs` | Utility scripts |
-| `batch/batch-prompt.md` | Batch worker prompt |
-| `batch/batch-runner.sh` | Batch orchestrator |
-| `dashboard/*` | Go TUI dashboard |
-| `templates/*` | Base templates |
-| `fonts/*` | Self-hosted fonts |
-| `.claude/skills/*` | Skill definitions |
-| `docs/*` | Documentation |
-| `VERSION` | Current version number |
+| `templates/*` | HTML template, state list, example portal config |
+| `fonts/*` | Self-hosted fonts for PDF rendering |
+| `batch/tracker-additions/*` | Tracker merge staging area |
+| `dashboard/*` | Optional Go dashboard |
+| `README*.md` | Local orientation docs |
+| `docs/*` | Focused maintenance/customization docs |
+| `AGENTS.md` | Local agent notes |
 | `DATA_CONTRACT.md` | This file |
 
-## The Rule
+## Rule of Thumb
 
-**If a file is in the User Layer, no update process may read, modify, or delete it.**
-
-**If a file is in the System Layer, it can be safely replaced with the latest version from the upstream repo.**
+- Personalization goes in the user layer
+- Shared workflow logic goes in the system layer
+- If a change would overwrite the user's facts or generated work, stop and ask

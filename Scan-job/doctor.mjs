@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * doctor.mjs — Setup validation for career-ops
+ * doctor.mjs — Setup validation for the local Scan-job workflow
  * Checks all prerequisites and prints a pass/fail checklist.
  */
 
@@ -71,7 +71,7 @@ function checkCv() {
     label: 'cv.md not found',
     fix: [
       'Create cv.md in the project root with your CV in markdown',
-      'See examples/ for reference CVs',
+      'Use your existing resume as the factual source and keep the sections simple',
     ],
   };
 }
@@ -150,7 +150,7 @@ function checkAutoDir(name) {
 }
 
 async function main() {
-  console.log('\ncareer-ops doctor');
+  console.log('\nscan-job doctor');
   console.log('================\n');
 
   const checks = [
@@ -186,9 +186,7 @@ async function main() {
     console.log(`Result: ${failures} issue${failures === 1 ? '' : 's'} found. Fix them and run \`npm run doctor\` again.`);
     process.exit(1);
   } else {
-    console.log('Result: All checks passed. You\'re ready to go! Run `claude` to start.');
-    console.log('');
-    console.log('Join the community: https://discord.gg/8pRpHETxa4');
+    console.log('Result: All checks passed. You\'re ready to use the local Task 5 workflow.');
     process.exit(0);
   }
 }

@@ -23,6 +23,36 @@ function sanitizeField(value) {
   return normalizeSpacing(value).replace(/\s*\|\s*/g, ' / ');
 }
 
+function looksLikeLocation(value) {
+  const lower = normalizeSpacing(value).toLowerCase();
+  if (!lower) return false;
+  return (
+    lower.includes(',') ||
+    [
+      'remote',
+      'hybrid',
+      'onsite',
+      'on-site',
+      'office',
+      'canada',
+      'united states',
+      'usa',
+      'taiwan',
+      'china',
+      'vancouver',
+      'toronto',
+      'taipei',
+      'new taipei',
+      'san francisco',
+      'seattle',
+      'austin',
+      'beijing',
+      'shanghai',
+      'shenzhen',
+    ].some(keyword => lower.includes(keyword))
+  );
+}
+
 function normalizeKey(company, title) {
   return `${sanitizeField(company).toLowerCase()}::${sanitizeField(title).toLowerCase()}`;
 }
@@ -31,13 +61,19 @@ function parsePendingLine(rawLine) {
   const line = rawLine.trim();
   if (!line.startsWith('- [ ] ')) return null;
   const payload = line.slice(6).trim();
-  const firstSep = payload.indexOf('|');
-  const secondSep = payload.indexOf('|', firstSep + 1);
-  if (firstSep === -1 || secondSep === -1) return null;
+  const parts = payload.split('|').map(part => part.trim());
+  if (parts.length < 3) return null;
+  let location = '';
+  let titleParts = parts.slice(2);
+  if (titleParts.length > 1 && looksLikeLocation(titleParts.at(-1) || '')) {
+    location = sanitizeField(titleParts.at(-1) || '');
+    titleParts = titleParts.slice(0, -1);
+  }
   return {
-    url: normalizeSpacing(payload.slice(0, firstSep)),
-    company: sanitizeField(payload.slice(firstSep + 1, secondSep)),
-    title: sanitizeField(payload.slice(secondSep + 1)),
+    url: normalizeSpacing(parts[0]),
+    company: sanitizeField(parts[1]),
+    title: sanitizeField(titleParts.join(' | ')),
+    location,
   };
 }
 
@@ -58,7 +94,11 @@ function parseProcessedLine(rawLine) {
 }
 
 function formatPending(entry) {
-  return `- [ ] ${entry.url} | ${entry.company} | ${entry.title}`;
+  const base = `- [ ] ${entry.url} | ${entry.company} | ${entry.title}`;
+  if (entry.location) {
+    return `${base} | ${entry.location}`;
+  }
+  return base;
 }
 
 function formatProcessed(entry) {

@@ -88,7 +88,9 @@ Daily_Task/
 1. `task 5 scan`
    - 掃描新職缺
    - 更新 `data/pipeline.md`
-   - 更新 `data/scan-history.tsv`
+   - 更新 `data/scan-runs/YYYY-MM-DD.md`（每天一份、每次 scan 一段）
+   - 更新 `data/latest-scan-run.json`（給 status / dashboard 讀最新摘要）
+   - 維護 `data/scan-history.tsv`（機器用 dedup 歷史）
 2. `task 5 process`
    - 處理最上面的待辦職缺
    - 產生 `reports/*.md`
@@ -99,7 +101,7 @@ Daily_Task/
 3. `task 5 pipeline`
    - 看 pending / processed / latest scan 摘要
 4. `task 5 outputs`
-   - 看最新 report、HTML、PDF 與 tracker 路徑
+   - 看最新 report、HTML、PDF、每日 scan log 與 tracker 路徑
 5. `task 5 maintenance`
    - 進入維護 / 診斷子選單
 6. `task 5 dashboard`
