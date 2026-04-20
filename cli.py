@@ -20,6 +20,7 @@ UPSTREAM_DIR = ROOT_DIR / "Scan-job"
 GUIDE_PATH = ROOT_DIR / "README.zh-TW.md"
 
 CommandRunner = Callable[[list[str], Path], int]
+ProcessOutputMode = str
 
 
 @dataclass(slots=True)
@@ -27,6 +28,7 @@ class PendingJob:
     url: str
     company: str
     title: str
+    location: str
     raw_line: str
 
 
@@ -52,6 +54,65 @@ class ApplicationRecord:
     pdf: str
     report_path: str
     notes: str
+
+
+@dataclass(slots=True)
+class ProcessOutputArtifacts:
+    mode: ProcessOutputMode
+    pdf_success: bool
+    generated_paths: list[Path]
+
+
+@dataclass(slots=True)
+class ProcessRequest:
+    output_mode: ProcessOutputMode = "html"
+    pending_index: int = 0
+
+
+@dataclass(slots=True)
+class ScanTargetRequest:
+    label: str
+    focus_keys: list[str]
+    focus_labels: list[str]
+    focus_keywords: list[str]
+    location_keys: list[str]
+    location_labels: list[str]
+    location_keywords: list[str]
+    work_mode_keys: list[str]
+    work_mode_labels: list[str]
+    work_mode_keywords: list[str]
+
+
+@dataclass(slots=True)
+class ScanTargetState:
+    label: str
+    focus_keys: list[str]
+    focus_labels: list[str]
+    location_keys: list[str]
+    location_labels: list[str]
+    work_mode_keys: list[str]
+    work_mode_labels: list[str]
+    selected_on: str
+
+
+@dataclass(slots=True)
+class LatestScanRunSummary:
+    date: str
+    time: str
+    target_label: str
+    focus_labels: list[str]
+    location_labels: list[str]
+    work_mode_labels: list[str]
+    companies_scanned: int
+    total_jobs_found: int
+    filtered_by_title: int
+    filtered_by_location: int
+    filtered_by_work_mode: int
+    duplicates: int
+    new_offers_discovered: int
+    pending_queue_rebuilt: int
+    scored_scan_matches: int
+    daily_log_path: str
 
 
 class _HTMLTextExtractor(HTMLParser):
@@ -89,7 +150,18 @@ def main(
     if command in {"clean", "pipeline-clean", "clean-pipeline", "清理"}:
         return _clean_pipeline(runner)
     if command in {"process", "process-top", "run-one", "處理"}:
-        return _process_top_pipeline_job(runner)
+        try:
+            process_request = _parse_process_request(remaining)
+        except ValueError as exc:
+            print(exc)
+            print("")
+            print(_help_text())
+            return 1
+        return _process_pipeline_job_by_index(
+            runner,
+            pending_index=process_request.pending_index,
+            output_mode=process_request.output_mode,
+        )
     if command in {"pipeline", "pipeline-status", "看盤面"}:
         _print_pipeline_status()
         return 0
@@ -160,6 +232,10 @@ def _cv_path() -> Path:
     return _repo_dir() / "cv.md"
 
 
+def _profile_config_path() -> Path:
+    return _repo_dir() / "config" / "profile.yml"
+
+
 def _profile_overrides_path() -> Path:
     return _repo_dir() / "modes" / "_profile.md"
 
@@ -172,17 +248,25 @@ def _dashboard_path() -> Path:
     return _data_dir() / "job-dashboard.md"
 
 
+def _scan_target_state_path() -> Path:
+    return _data_dir() / "scan-target-profile.json"
+
+
+def _latest_scan_run_path() -> Path:
+    return _data_dir() / "latest-scan-run.json"
+
+
 def _help_text() -> str:
     return "\n".join(
         [
             "Task 5: Scan-job Workflow",
             "用法:",
-            "  task 5 scan                    掃描新職缺並更新 pipeline / scan history",
+            "  task 5 scan                    依 target profile 掃描新職缺並更新 pipeline / scan history",
             "  task 5 clean                   清理 pipeline 重複項並刷新 dashboard",
-            "  task 5 process                 處理最上面的待辦職缺",
+            "  task 5 process [--index N] [--output html|latex]  處理指定待辦職缺（預設第一筆）",
             "  task 5 pipeline                顯示 pending / processed / latest scan 摘要",
             "  task 5 dashboard               產生並顯示整合總表（job dashboard）",
-            "  task 5 outputs                 顯示最新 report / HTML / PDF 與資料路徑",
+            "  task 5 outputs                 顯示最新 report / HTML / PDF / daily scan log 與資料路徑",
             "  task 5 resume [--jd-file PATH]  生成單頁 LaTeX 履歷 PDF",
             "  task 5 maintenance             進入維護 / 診斷子選單",
             "",
@@ -197,10 +281,10 @@ def _interactive_menu(runner: CommandRunner) -> int:
     while True:
         print("Task 5: Scan-job Workflow")
         print("=================================")
-        print("1. Scan new jobs - 找新職缺並更新 pipeline")
-        print("2. Process top pipeline job - 處理第一筆待辦職缺並產生 report + outputs")
+        print("1. Scan new jobs - 選擇 target profile 掃描新職缺並更新 pipeline")
+        print("2. Process pipeline job - 選擇要處理哪一筆待辦職缺，再選 HTML / LaTeX outputs")
         print("3. View pipeline status - 看 pending / processed / latest scan 結果")
-        print("4. View generated outputs - 看最新 reports、HTML/PDF、tracker 路徑")
+        print("4. View generated outputs - 看最新 reports、HTML/PDF、daily scan log、tracker 路徑")
         print("5. Maintenance / diagnostics - doctor、verify、clean、init、repo path、help")
         print("6. Show job dashboard - 看整合總表與快速連結")
         print("7. Clean pipeline - 清理重複 pending / 標準化 layout")
@@ -213,9 +297,23 @@ def _interactive_menu(runner: CommandRunner) -> int:
         if choice in {"q", "quit", "exit"}:
             return last_exit_code
         if choice == "1":
-            last_exit_code = _scan_new_jobs([], runner)
+            target_request = _prompt_scan_target_request()
+            if target_request is None:
+                last_exit_code = 0
+            else:
+                last_exit_code = _scan_new_jobs(_scan_args_from_target_request(target_request), runner)
+                if last_exit_code == 0:
+                    _save_scan_target_state(target_request)
         elif choice == "2":
-            last_exit_code = _process_top_pipeline_job(runner)
+            selected_job = _prompt_pipeline_job_selection()
+            if selected_job is None:
+                last_exit_code = 0
+            else:
+                output_mode = _prompt_process_output_mode()
+                if output_mode is None:
+                    last_exit_code = 0
+                else:
+                    last_exit_code = _process_pipeline_job(selected_job, runner, output_mode=output_mode)
         elif choice == "3":
             _print_pipeline_status()
             last_exit_code = 0
@@ -321,6 +419,8 @@ def _print_paths() -> None:
     print(f"  scan history: {_scan_history_path()}")
     print(f"  applications tracker: {_applications_path()}")
     print(f"  job dashboard: {_dashboard_path()}")
+    print(f"  latest scan run: {_latest_scan_run_path()}")
+    print(f"  daily scan logs: {_data_dir() / 'scan-runs'}")
     print(f"  reports: {_reports_dir()}")
     print(f"  output: {_output_dir()}")
     print("  原則: 與 Career-Ops 相關的 clone、設定、輸出都留在 Career_ops/ 下面。")
@@ -331,7 +431,7 @@ def _print_status() -> None:
     config_paths = (
         ("repo", _repo_dir()),
         ("package.json", _repo_dir() / "package.json"),
-        ("config/profile.yml", _repo_dir() / "config" / "profile.yml"),
+        ("config/profile.yml", _profile_config_path()),
         ("portals.yml", _repo_dir() / "portals.yml"),
         ("cv.md", _cv_path()),
         ("article-digest.md", _article_digest_path()),
@@ -358,8 +458,17 @@ def _print_status() -> None:
 
 
 def _scan_new_jobs(extra_args: list[str], runner: CommandRunner) -> int:
+    catalog: dict[str, object] | None = None
+    target_request: ScanTargetRequest | None = None
+    if not extra_args:
+        catalog = _load_targeting_catalog()
+        if catalog is not None:
+            target_request = _default_scan_target_request(catalog)
+            extra_args = _scan_args_from_target_request(target_request)
     exit_code = _run_repo_script("scan", extra_args, runner)
     if exit_code == 0:
+        if target_request is not None:
+            _save_scan_target_state(target_request)
         _refresh_dashboard_file()
     return exit_code
 
@@ -377,7 +486,8 @@ def _print_pipeline_status() -> None:
         return
 
     pending_jobs, processed_jobs = _load_pipeline_state()
-    latest_scan_date, latest_scan_count = _latest_scan_snapshot()
+    scan_target_state = _load_scan_target_state()
+    latest_scan_run = _load_latest_scan_run_summary()
 
     print("Pipeline Summary")
     print("---------------------------------")
@@ -385,10 +495,24 @@ def _print_pipeline_status() -> None:
     print(f"Processed jobs: {len(processed_jobs)}")
     print("")
 
+    if scan_target_state is None:
+        print("Current target profile: Not recorded yet")
+        print("Focus areas: Not set")
+        print("Locations: Not set")
+        print("Work modes: Not set")
+    else:
+        print(f"Current target profile: {scan_target_state.label}")
+        print(f"Focus areas: {_format_scan_target_values(scan_target_state.focus_labels)}")
+        print(f"Locations: {_format_scan_target_values(scan_target_state.location_labels)}")
+        print(f"Work modes: {_format_scan_target_values(scan_target_state.work_mode_labels)}")
+    print("")
+
     print("Top pending job:")
     if pending_jobs:
         top = pending_jobs[0]
         print(f"- {top.company} — {top.title}")
+        if top.location:
+            print(f"  Location: {top.location}")
         print(f"  {top.url}")
     else:
         print("- None")
@@ -403,12 +527,20 @@ def _print_pipeline_status() -> None:
         print("- None")
     print("")
 
-    print("Latest scan snapshot:")
-    if latest_scan_date is None:
-        print("- No scan history available yet")
+    print("Latest scan run:")
+    if latest_scan_run is None:
+        print("- No scan run summary available yet")
     else:
-        print(f"- Date: {latest_scan_date}")
-        print(f"- New offers discovered that day: {latest_scan_count}")
+        timestamp = latest_scan_run.date
+        if latest_scan_run.time:
+            timestamp = f"{timestamp} {latest_scan_run.time}"
+        print(f"- Completed at: {timestamp}")
+        print(f"- Target profile: {latest_scan_run.target_label or 'Unknown'}")
+        print(f"- Current scan matches: {latest_scan_run.scored_scan_matches}")
+        print(f"- Pending queue rebuilt: {latest_scan_run.pending_queue_rebuilt}")
+        print(f"- New unique offers added to history: {latest_scan_run.new_offers_discovered}")
+        if latest_scan_run.daily_log_path:
+            print(f"- Daily scan log: {(_repo_dir() / latest_scan_run.daily_log_path) if not latest_scan_run.daily_log_path.startswith('/') else latest_scan_run.daily_log_path}")
 
 
 def _print_generated_outputs() -> None:
@@ -419,6 +551,10 @@ def _print_generated_outputs() -> None:
     latest_report = _latest_file(_reports_dir(), "*.md")
     latest_html = _latest_file(_output_dir(), "*.html")
     latest_pdf = _latest_file(_output_dir(), "*.pdf")
+    latest_scan_run = _load_latest_scan_run_summary()
+    latest_scan_log = None
+    if latest_scan_run and latest_scan_run.daily_log_path:
+        latest_scan_log = _repo_dir() / latest_scan_run.daily_log_path
 
     print("Generated Outputs")
     print("---------------------------------")
@@ -435,8 +571,9 @@ def _print_generated_outputs() -> None:
     print(f"- {_dashboard_path()}")
     print("Pipeline:")
     print(f"- {_pipeline_path()}")
-    print("Scan history:")
-    print(f"- {_scan_history_path()}")
+    print("Scan logs:")
+    print(f"- Latest daily scan log: {latest_scan_log if latest_scan_log else 'None'}")
+    print(f"- Machine dedup history: {_scan_history_path()}")
 
 
 def _show_dashboard() -> None:
@@ -450,7 +587,697 @@ def _show_dashboard() -> None:
     print(dashboard_path.read_text(encoding="utf-8"))
 
 
-def _process_top_pipeline_job(runner: CommandRunner) -> int:
+def _unique_preserve_order(values: list[str]) -> list[str]:
+    seen: set[str] = set()
+    result: list[str] = []
+    for value in values:
+        normalized = value.strip()
+        if normalized and normalized not in seen:
+            seen.add(normalized)
+            result.append(normalized)
+    return result
+
+
+def _load_targeting_catalog() -> dict[str, object] | None:
+    if not _repo_ready():
+        _print_repo_not_ready()
+        return None
+
+    script_path = _repo_dir() / "targeting-config.mjs"
+    if not script_path.exists():
+        print(f"缺少 targeting config helper: {script_path}")
+        return None
+
+    completed = subprocess.run(
+        ["node", script_path.name],
+        cwd=_repo_dir(),
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if completed.returncode != 0:
+        message = completed.stderr.strip() or completed.stdout.strip() or "unknown error"
+        print(f"讀取 target profile 設定失敗: {message}")
+        return None
+
+    try:
+        payload = json.loads(completed.stdout)
+    except json.JSONDecodeError as exc:
+        print(f"targeting config JSON 解析失敗: {exc}")
+        return None
+
+    return payload
+
+
+def _catalog_entries_by_key(entries: list[dict[str, object]]) -> dict[str, dict[str, object]]:
+    return {
+        str(entry.get("key", "")).strip(): entry
+        for entry in entries
+        if str(entry.get("key", "")).strip()
+    }
+
+
+def _scan_target_labels_for_keys(entries: list[dict[str, object]], selected_keys: list[str]) -> list[str]:
+    entry_map = _catalog_entries_by_key(entries)
+    labels: list[str] = []
+    for key in selected_keys:
+        entry = entry_map.get(key)
+        labels.append(str(entry.get("label") or key).strip() if entry else key)
+    return _unique_preserve_order(labels)
+
+
+def _build_scan_target_state(
+    request: ScanTargetRequest,
+) -> ScanTargetState:
+    return ScanTargetState(
+        label=request.label or "Unknown target profile",
+        focus_keys=list(request.focus_keys),
+        focus_labels=list(request.focus_labels) or list(request.focus_keys),
+        location_keys=list(request.location_keys),
+        location_labels=list(request.location_labels) or list(request.location_keys),
+        work_mode_keys=list(request.work_mode_keys),
+        work_mode_labels=list(request.work_mode_labels) or list(request.work_mode_keys),
+        selected_on=_today_iso(),
+    )
+
+
+def _save_scan_target_state(
+    request: ScanTargetRequest,
+) -> None:
+    state = _build_scan_target_state(request)
+    payload = {
+        "label": state.label,
+        "focus_keys": state.focus_keys,
+        "focus_labels": state.focus_labels,
+        "location_keys": state.location_keys,
+        "location_labels": state.location_labels,
+        "work_mode_keys": state.work_mode_keys,
+        "work_mode_labels": state.work_mode_labels,
+        "selected_on": state.selected_on,
+    }
+    state_path = _scan_target_state_path()
+    state_path.parent.mkdir(parents=True, exist_ok=True)
+    state_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+def _load_scan_target_state() -> ScanTargetState | None:
+    state_path = _scan_target_state_path()
+    if not state_path.exists():
+        return None
+
+    try:
+        payload = json.loads(state_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+
+    def read_list(name: str) -> list[str]:
+        values = payload.get(name, [])
+        if not isinstance(values, list):
+            return []
+        return [str(value).strip() for value in values if str(value).strip()]
+
+    focus_keys = read_list("focus_keys")
+    location_keys = read_list("location_keys")
+    work_mode_keys = read_list("work_mode_keys")
+    focus_labels = read_list("focus_labels") or focus_keys
+    location_labels = read_list("location_labels") or location_keys
+    work_mode_labels = read_list("work_mode_labels") or work_mode_keys
+    label = str(payload.get("label") or "").strip() or "Unknown target profile"
+    selected_on = str(payload.get("selected_on") or "").strip()
+    return ScanTargetState(
+        label=label,
+        focus_keys=focus_keys,
+        focus_labels=focus_labels,
+        location_keys=location_keys,
+        location_labels=location_labels,
+        work_mode_keys=work_mode_keys,
+        work_mode_labels=work_mode_labels,
+        selected_on=selected_on,
+    )
+
+
+def _format_scan_target_values(values: list[str]) -> str:
+    return ", ".join(values) if values else "Not set"
+
+
+def _load_latest_scan_run_summary() -> LatestScanRunSummary | None:
+    summary_path = _latest_scan_run_path()
+    if not summary_path.exists():
+        return None
+
+    try:
+        payload = json.loads(summary_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+
+    def read_list(*names: str) -> list[str]:
+        values = []
+        for name in names:
+            if name in payload:
+                values = payload.get(name, [])
+                break
+        if not isinstance(values, list):
+            return []
+        return [str(value).strip() for value in values if str(value).strip()]
+
+    def read_int(*names: str) -> int:
+        value = 0
+        for name in names:
+            if name in payload:
+                value = payload.get(name, 0)
+                break
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return 0
+
+    date = str(payload.get("date") or "").strip()
+    time = str(payload.get("time") or "").strip()
+    if not date:
+        return None
+
+    return LatestScanRunSummary(
+        date=date,
+        time=time,
+        target_label=str(payload.get("target_label") or payload.get("targetLabel") or "").strip(),
+        focus_labels=read_list("focus_labels", "focusLabels"),
+        location_labels=read_list("location_labels", "locationLabels"),
+        work_mode_labels=read_list("work_mode_labels", "workModeLabels"),
+        companies_scanned=read_int("companies_scanned", "companiesScanned"),
+        total_jobs_found=read_int("total_jobs_found", "totalJobsFound"),
+        filtered_by_title=read_int("filtered_by_title", "filteredByTitle"),
+        filtered_by_location=read_int("filtered_by_location", "filteredByLocation"),
+        filtered_by_work_mode=read_int("filtered_by_work_mode", "filteredByWorkMode"),
+        duplicates=read_int("duplicates"),
+        new_offers_discovered=read_int("new_offers_discovered", "newOffersDiscovered"),
+        pending_queue_rebuilt=read_int("pending_queue_rebuilt", "pendingQueueRebuilt"),
+        scored_scan_matches=read_int("scored_scan_matches", "scoredScanMatches"),
+        daily_log_path=str(payload.get("daily_log_path") or payload.get("dailyLogPath") or "").strip(),
+    )
+
+
+def _resolve_scan_target_request(
+    catalog: dict[str, object],
+    *,
+    label: str,
+    focus_keys: list[str],
+    location_keys: list[str],
+    work_mode_keys: list[str],
+) -> ScanTargetRequest:
+    focus_entries = _catalog_entries_by_key(list(catalog.get("focus_areas", [])))
+    location_entries = _catalog_entries_by_key(list(catalog.get("locations", [])))
+    work_mode_entries = _catalog_entries_by_key(list(catalog.get("work_modes", [])))
+
+    def collect_keywords(selected_keys: list[str], entry_map: dict[str, dict[str, object]]) -> list[str]:
+        keywords: list[str] = []
+        for key in selected_keys:
+            entry = entry_map.get(key)
+            if not entry:
+                continue
+            keywords.extend(str(keyword).strip() for keyword in list(entry.get("keywords", [])))
+        return _unique_preserve_order(keywords)
+
+    return ScanTargetRequest(
+        label=label,
+        focus_keys=focus_keys,
+        focus_labels=_scan_target_labels_for_keys(list(catalog.get("focus_areas", [])), focus_keys),
+        focus_keywords=collect_keywords(focus_keys, focus_entries),
+        location_keys=location_keys,
+        location_labels=_scan_target_labels_for_keys(list(catalog.get("locations", [])), location_keys),
+        location_keywords=collect_keywords(location_keys, location_entries),
+        work_mode_keys=work_mode_keys,
+        work_mode_labels=_scan_target_labels_for_keys(list(catalog.get("work_modes", [])), work_mode_keys),
+        work_mode_keywords=collect_keywords(work_mode_keys, work_mode_entries),
+    )
+
+
+def _default_scan_target_request(catalog: dict[str, object]) -> ScanTargetRequest:
+    saved_profiles = _catalog_entries_by_key(list(catalog.get("saved_profiles", [])))
+    default_key = str(catalog.get("default_saved_profile", "")).strip()
+    if default_key and default_key in saved_profiles:
+        saved = saved_profiles[default_key]
+        return _resolve_scan_target_request(
+            catalog,
+            label=str(saved.get("label") or saved.get("key") or "Default target profile"),
+            focus_keys=list(saved.get("focus_areas", [])),
+            location_keys=list(saved.get("locations", [])),
+            work_mode_keys=list(saved.get("work_modes", [])),
+        )
+
+    focus_keys = [str(entry.get("key")).strip() for entry in list(catalog.get("focus_areas", [])) if str(entry.get("key", "")).strip()]
+    location_keys = [str(entry.get("key")).strip() for entry in list(catalog.get("locations", [])) if str(entry.get("key", "")).strip()]
+    work_mode_keys = [str(entry.get("key")).strip() for entry in list(catalog.get("work_modes", [])) if str(entry.get("key", "")).strip()]
+    return _resolve_scan_target_request(
+        catalog,
+        label="Default broad target profile",
+        focus_keys=focus_keys,
+        location_keys=location_keys,
+        work_mode_keys=work_mode_keys,
+    )
+
+
+def _auto_generated_scan_target_request(catalog: dict[str, object]) -> ScanTargetRequest:
+    focus_entries = list(catalog.get("focus_areas", []))
+    location_entries = list(catalog.get("locations", []))
+    work_mode_entries = list(catalog.get("work_modes", []))
+
+    cv_text = _cv_path().read_text(encoding="utf-8") if _cv_path().exists() else ""
+    combined_text = " ".join(
+        [
+            cv_text.lower(),
+            " ".join(str(role).lower() for role in list(catalog.get("target_roles_primary", []))),
+            str(catalog.get("headline", "")).lower(),
+        ]
+    )
+    location_text = " ".join(
+        [
+            str(catalog.get("candidate_location", "")).lower(),
+            str(catalog.get("location_flexibility", "")).lower(),
+            str(catalog.get("onsite_availability", "")).lower(),
+        ]
+    )
+
+    focus_keys = [
+        str(entry.get("key")).strip()
+        for entry in focus_entries
+        if any(str(keyword).lower() in combined_text for keyword in list(entry.get("keywords", [])))
+    ]
+    location_keys = [
+        str(entry.get("key")).strip()
+        for entry in location_entries
+        if any(str(keyword).lower() in location_text for keyword in list(entry.get("keywords", [])))
+    ]
+    work_mode_keys = [
+        str(entry.get("key")).strip()
+        for entry in work_mode_entries
+        if any(str(keyword).lower() in location_text for keyword in list(entry.get("keywords", [])))
+    ]
+
+    default_request = _default_scan_target_request(catalog)
+    if not focus_keys:
+        focus_keys = default_request.focus_keys
+    if not location_keys:
+        location_keys = default_request.location_keys
+    if not work_mode_keys:
+        work_mode_keys = default_request.work_mode_keys
+
+    return _resolve_scan_target_request(
+        catalog,
+        label="Auto-generated from CV + profile",
+        focus_keys=_unique_preserve_order(focus_keys),
+        location_keys=_unique_preserve_order(location_keys),
+        work_mode_keys=_unique_preserve_order(work_mode_keys),
+    )
+
+
+def _prompt_select_one(
+    title: str,
+    entries: list[dict[str, object]],
+    *,
+    allow_back: bool = True,
+) -> dict[str, object] | None:
+    if not entries:
+        return None
+
+    while True:
+        print(title)
+        print("---------------------------------")
+        for index, entry in enumerate(entries, start=1):
+            print(f"{index}. {entry.get('label') or entry.get('key')}")
+        if allow_back:
+            print("b. Back")
+        raw_choice = _safe_input("Select one option: ")
+        if raw_choice is None:
+            return None
+
+        choice = raw_choice.strip().lower()
+        if allow_back and choice in {"b", "back", "q", "quit", "exit"}:
+            return None
+        if choice.isdigit():
+            selected_index = int(choice) - 1
+            if 0 <= selected_index < len(entries):
+                return entries[selected_index]
+        print("Invalid selection. Please choose one of the listed options.")
+        print("")
+
+
+def _prompt_multi_select(
+    title: str,
+    entries: list[dict[str, object]],
+    *,
+    allow_back: bool = True,
+    allow_skip: bool = False,
+    default_all: bool = True,
+) -> list[str] | None:
+    if not entries:
+        return [] if allow_skip else None
+
+    keys = [str(entry.get("key")).strip() for entry in entries if str(entry.get("key", "")).strip()]
+    labels = {str(entry.get("key")).strip(): str(entry.get("label") or entry.get("key")).strip() for entry in entries}
+
+    while True:
+        print(title)
+        print("---------------------------------")
+        for index, key in enumerate(keys, start=1):
+            print(f"{index}. {labels[key]}")
+        if allow_skip:
+            print("s. Skip filter")
+        if allow_back:
+            print("b. Back")
+        prompt = "Select numbers (comma-separated"
+        if default_all:
+            prompt += ", Enter = all"
+        prompt += "): "
+        raw_choice = _safe_input(prompt)
+        if raw_choice is None:
+            return None
+
+        choice = raw_choice.strip().lower()
+        if not choice and default_all:
+            return keys
+        if allow_skip and choice in {"s", "skip"}:
+            return []
+        if allow_back and choice in {"b", "back", "q", "quit", "exit"}:
+            return None
+
+        parts = [part.strip() for part in choice.split(",") if part.strip()]
+        if parts and all(part.isdigit() for part in parts):
+            selected: list[str] = []
+            valid = True
+            for part in parts:
+                selected_index = int(part) - 1
+                if not 0 <= selected_index < len(keys):
+                    valid = False
+                    break
+                selected.append(keys[selected_index])
+            if valid:
+                return _unique_preserve_order(selected)
+
+        print("Invalid selection. Please use comma-separated numbers from the list.")
+        print("")
+
+
+def _prompt_scan_target_request() -> ScanTargetRequest | None:
+    catalog = _load_targeting_catalog()
+    if catalog is None:
+        return None
+
+    saved_profiles = list(catalog.get("saved_profiles", []))
+
+    while True:
+        print("Choose scan target profile")
+        print("---------------------------------")
+        print("1. Use current default target profile")
+        print("2. Auto-generate from CV + profile")
+        print("3. Choose saved target profile")
+        print("4. Custom focus area / location / work mode")
+        print("b. Back")
+        raw_choice = _safe_input("Select scan target mode: ")
+        if raw_choice is None:
+            return None
+
+        choice = raw_choice.strip().lower()
+        if choice in {"1", "default"}:
+            return _default_scan_target_request(catalog)
+        if choice in {"2", "auto", "cv", "profile"}:
+            return _auto_generated_scan_target_request(catalog)
+        if choice in {"3", "saved"}:
+            saved = _prompt_select_one("Saved target profiles", saved_profiles)
+            if saved is None:
+                continue
+            return _resolve_scan_target_request(
+                catalog,
+                label=str(saved.get("label") or saved.get("key") or "Saved target profile"),
+                focus_keys=list(saved.get("focus_areas", [])),
+                location_keys=list(saved.get("locations", [])),
+                work_mode_keys=list(saved.get("work_modes", [])),
+            )
+        if choice in {"4", "custom"}:
+            focus_keys = _prompt_multi_select("Choose focus areas", list(catalog.get("focus_areas", [])))
+            if focus_keys is None:
+                continue
+            location_keys = _prompt_multi_select("Choose target locations", list(catalog.get("locations", [])))
+            if location_keys is None:
+                continue
+            work_mode_keys = _prompt_multi_select("Choose work modes", list(catalog.get("work_modes", [])))
+            if work_mode_keys is None:
+                continue
+            return _resolve_scan_target_request(
+                catalog,
+                label="Custom target profile",
+                focus_keys=focus_keys,
+                location_keys=location_keys,
+                work_mode_keys=work_mode_keys,
+            )
+        if choice in {"b", "back", "q", "quit", "exit"}:
+            return None
+
+        print("Invalid selection. Please choose one of the target profile modes.")
+        print("")
+
+
+def _scan_args_from_target_request(request: ScanTargetRequest) -> list[str]:
+    args: list[str] = []
+    if request.label:
+        args.extend(["--target-label", request.label])
+    if request.focus_labels:
+        args.extend(["--focus-labels", ",".join(request.focus_labels)])
+    if request.focus_keywords:
+        args.extend(["--focus-keywords", ",".join(request.focus_keywords)])
+    if request.location_labels:
+        args.extend(["--location-labels", ",".join(request.location_labels)])
+    if request.location_keywords:
+        args.extend(["--location-keywords", ",".join(request.location_keywords)])
+    if request.work_mode_labels:
+        args.extend(["--work-mode-labels", ",".join(request.work_mode_labels)])
+    if request.work_mode_keywords:
+        args.extend(["--work-mode-keywords", ",".join(request.work_mode_keywords)])
+    return args
+
+
+def _parse_process_request(args: list[str]) -> ProcessRequest:
+    request = ProcessRequest()
+    index_value: int | None = None
+    output_value: str | None = None
+    i = 0
+
+    while i < len(args):
+        arg = args[i].strip()
+        if arg == "--output":
+            if i + 1 >= len(args):
+                raise ValueError("Usage: task 5 process [--index N] [--output html|latex]")
+            output_value = args[i + 1].strip().lower()
+            i += 2
+            continue
+        if arg.startswith("--output="):
+            output_value = arg.split("=", 1)[1].strip().lower()
+            i += 1
+            continue
+        if arg == "--index":
+            if i + 1 >= len(args):
+                raise ValueError("Usage: task 5 process [--index N] [--output html|latex]")
+            try:
+                index_value = int(args[i + 1].strip())
+            except ValueError as exc:
+                raise ValueError("Pipeline index must be a positive integer.") from exc
+            i += 2
+            continue
+        if arg.startswith("--index="):
+            try:
+                index_value = int(arg.split("=", 1)[1].strip())
+            except ValueError as exc:
+                raise ValueError("Pipeline index must be a positive integer.") from exc
+            i += 1
+            continue
+        raise ValueError("Usage: task 5 process [--index N] [--output html|latex]")
+
+    if output_value is not None:
+        if output_value not in {"html", "latex"}:
+            raise ValueError("Output backend must be one of: html, latex")
+        request.output_mode = output_value
+
+    if index_value is not None:
+        if index_value < 1:
+            raise ValueError("Pipeline index must be a positive integer.")
+        request.pending_index = index_value - 1
+
+    return request
+
+
+def _parse_process_output_mode(args: list[str]) -> ProcessOutputMode:
+    return _parse_process_request(args).output_mode
+
+
+def _prompt_pipeline_job_selection() -> PendingJob | None:
+    if not _repo_ready():
+        _print_repo_not_ready()
+        return None
+
+    pending_jobs, _processed_jobs = _load_pipeline_state()
+    if not pending_jobs:
+        print("Pipeline 沒有待處理職缺。先執行 `task 5 scan`。")
+        return None
+
+    while True:
+        print("Choose pipeline job")
+        print("---------------------------------")
+        print("1. Auto process top pending job")
+        print("2. Choose a pending job from all pending jobs")
+        print("3. Filter pending jobs by keyword / location / work mode")
+        print("b. Back")
+        raw_choice = _safe_input("Select job source: ")
+        if raw_choice is None:
+            return None
+
+        choice = raw_choice.strip().lower()
+        if choice in {"1", "top", "auto"}:
+            return pending_jobs[0]
+        if choice in {"2", "custom", "pick"}:
+            return _prompt_pending_job_choice(pending_jobs)
+        if choice in {"3", "filter"}:
+            return _prompt_filtered_pending_job_choice(pending_jobs)
+        if choice in {"b", "back", "q", "quit", "exit"}:
+            return None
+
+        print("Invalid selection. Please choose top, custom, filter, or back.")
+        print("")
+
+
+def _prompt_pending_job_choice(pending_jobs: list[PendingJob], *, title: str = "Pending jobs") -> PendingJob | None:
+    while True:
+        print(title)
+        print("---------------------------------")
+        for index, job in enumerate(pending_jobs, start=1):
+            suffix = f" | {job.location}" if job.location else ""
+            print(f"{index}. {job.company} | {job.title}{suffix}")
+        print("b. Back")
+        raw_choice = _safe_input("Select pending job number: ")
+        if raw_choice is None:
+            return None
+
+        choice = raw_choice.strip().lower()
+        if choice in {"b", "back", "q", "quit", "exit"}:
+            return None
+        if choice.isdigit():
+            selected_index = int(choice) - 1
+            if 0 <= selected_index < len(pending_jobs):
+                return pending_jobs[selected_index]
+
+        print("Invalid job number. Please choose one of the listed pending jobs.")
+        print("")
+
+
+def _job_matches_catalog_keywords(job: PendingJob, keywords: list[str]) -> bool:
+    if not keywords:
+        return True
+    haystack = f"{job.company} {job.title} {job.location}".lower()
+    return any(keyword.lower() in haystack for keyword in keywords)
+
+
+def _filter_pending_jobs(
+    pending_jobs: list[PendingJob],
+    *,
+    keyword_query: str,
+    location_keywords: list[str],
+    work_mode_keywords: list[str],
+) -> list[PendingJob]:
+    keyword_terms = [term.strip().lower() for term in re.split(r"[,\s]+", keyword_query) if term.strip()]
+    filtered: list[PendingJob] = []
+    for job in pending_jobs:
+        haystack = f"{job.company} {job.title} {job.location}".lower()
+        if keyword_terms and not all(term in haystack for term in keyword_terms):
+            continue
+        if not _job_matches_catalog_keywords(job, location_keywords):
+            continue
+        if not _job_matches_catalog_keywords(job, work_mode_keywords):
+            continue
+        filtered.append(job)
+    return filtered
+
+
+def _prompt_filtered_pending_job_choice(pending_jobs: list[PendingJob]) -> PendingJob | None:
+    catalog = _load_targeting_catalog()
+    if catalog is None:
+        return None
+
+    keyword_query = (_safe_input("Keyword filter for company/title/location (Enter to skip): ") or "").strip()
+    location_keys = _prompt_multi_select(
+        "Filter by locations",
+        list(catalog.get("locations", [])),
+        allow_skip=True,
+        default_all=False,
+    )
+    if location_keys is None:
+        return None
+    work_mode_keys = _prompt_multi_select(
+        "Filter by work modes",
+        list(catalog.get("work_modes", [])),
+        allow_skip=True,
+        default_all=False,
+    )
+    if work_mode_keys is None:
+        return None
+
+    location_map = _catalog_entries_by_key(list(catalog.get("locations", [])))
+    work_mode_map = _catalog_entries_by_key(list(catalog.get("work_modes", [])))
+    location_keywords = _unique_preserve_order(
+        [
+            str(keyword).strip()
+            for key in location_keys
+            for keyword in list(location_map.get(key, {}).get("keywords", []))
+        ]
+    )
+    work_mode_keywords = _unique_preserve_order(
+        [
+            str(keyword).strip()
+            for key in work_mode_keys
+            for keyword in list(work_mode_map.get(key, {}).get("keywords", []))
+        ]
+    )
+
+    filtered_jobs = _filter_pending_jobs(
+        pending_jobs,
+        keyword_query=keyword_query,
+        location_keywords=location_keywords,
+        work_mode_keywords=work_mode_keywords,
+    )
+    if not filtered_jobs:
+        print("No pending jobs matched the selected filters.")
+        print("")
+        return None
+
+    return _prompt_pending_job_choice(filtered_jobs, title="Filtered pending jobs")
+
+
+def _prompt_process_output_mode() -> ProcessOutputMode | None:
+    while True:
+        print("Choose output backend")
+        print("---------------------------------")
+        print("1. HTML -> PDF (current default)")
+        print("2. LaTeX one-page PDF")
+        print("b. Back")
+        raw_choice = _safe_input("Select output backend: ")
+        if raw_choice is None:
+            return None
+
+        choice = raw_choice.strip().lower()
+        if choice in {"1", "html"}:
+            return "html"
+        if choice in {"2", "latex", "tex"}:
+            return "latex"
+        if choice in {"b", "back", "q", "quit", "exit"}:
+            return None
+
+        print("Invalid output backend. Please choose html or latex.")
+        print("")
+
+
+def _process_pipeline_job_by_index(
+    runner: CommandRunner,
+    *,
+    pending_index: int = 0,
+    output_mode: ProcessOutputMode = "html",
+) -> int:
     if not _repo_ready():
         _print_repo_not_ready()
         return 1
@@ -460,14 +1287,44 @@ def _process_top_pipeline_job(runner: CommandRunner) -> int:
         print("Pipeline 沒有待處理職缺。先執行 `task 5 scan`。")
         return 0
 
-    top_job = pending_jobs[0]
-    print("Processing top pipeline job...")
-    print(f"  Company: {top_job.company}")
-    print(f"  Role: {top_job.title}")
-    print(f"  URL: {top_job.url}")
+    if pending_index < 0 or pending_index >= len(pending_jobs):
+        print(f"Pipeline index 超出範圍。目前共有 {len(pending_jobs)} 筆待辦職缺。")
+        return 1
+
+    return _process_pipeline_job(
+        pending_jobs[pending_index],
+        runner,
+        output_mode=output_mode,
+        pending_index=pending_index,
+    )
+
+
+def _process_top_pipeline_job(runner: CommandRunner, *, output_mode: ProcessOutputMode = "html") -> int:
+    return _process_pipeline_job_by_index(runner, pending_index=0, output_mode=output_mode)
+
+
+def _process_pipeline_job(
+    job: PendingJob,
+    runner: CommandRunner,
+    *,
+    output_mode: ProcessOutputMode = "html",
+    pending_index: int | None = None,
+) -> int:
+    if pending_index == 0:
+        print("Processing top pipeline job...")
+    elif pending_index is None:
+        print("Processing selected pipeline job...")
+    else:
+        print(f"Processing pipeline job #{pending_index + 1}...")
+    print(f"  Output backend: {output_mode}")
+    print(f"  Company: {job.company}")
+    print(f"  Role: {job.title}")
+    if job.location:
+        print(f"  Location: {job.location}")
+    print(f"  URL: {job.url}")
 
     try:
-        posting = _load_job_posting(top_job)
+        posting = _load_job_posting(job)
     except Exception as exc:
         print(f"無法載入職缺內容: {exc}")
         return 1
@@ -480,8 +1337,8 @@ def _process_top_pipeline_job(runner: CommandRunner) -> int:
     today = _today_iso()
     report_num = _next_report_num()
     candidate_slug = _candidate_slug()
-    company_slug = _slugify(top_job.company)
-    role_slug = _slugify(top_job.title)
+    company_slug = _slugify(job.company)
+    role_slug = _slugify(job.title)
 
     jd_path = _jds_dir() / f"{company_slug}-{role_slug}-{today}.md"
     report_path = _reports_dir() / f"{report_num:03d}-{company_slug}-{role_slug}-{today}.md"
@@ -491,19 +1348,16 @@ def _process_top_pipeline_job(runner: CommandRunner) -> int:
     jd_path.write_text(_render_jd_snapshot(posting), encoding="utf-8")
     evaluation = _evaluate_posting(posting)
     report_path.write_text(_render_report(posting, evaluation, report_num, pdf_path), encoding="utf-8")
-    html_path.write_text(_render_tailored_html(posting, evaluation), encoding="utf-8")
-
-    pdf_command = [
-        "npm",
-        "run",
-        "pdf",
-        "--",
-        str(html_path.relative_to(_repo_dir())),
-        str(pdf_path.relative_to(_repo_dir())),
-        f"--format={_paper_format(posting)}",
-    ]
-    pdf_exit_code = runner(pdf_command, _repo_dir())
-    pdf_success = pdf_exit_code == 0
+    output_artifacts = _generate_process_output(
+        posting=posting,
+        evaluation=evaluation,
+        jd_path=jd_path,
+        html_path=html_path,
+        pdf_path=pdf_path,
+        runner=runner,
+        output_mode=output_mode,
+    )
+    pdf_success = output_artifacts.pdf_success
 
     _ensure_applications_tracker()
     tsv_path = _tracker_additions_dir() / f"{report_num:03d}-{company_slug}-{role_slug}.tsv"
@@ -512,8 +1366,8 @@ def _process_top_pipeline_job(runner: CommandRunner) -> int:
             [
                 str(report_num),
                 today,
-                top_job.company,
-                top_job.title,
+                job.company,
+                job.title,
                 "Evaluated",
                 f"{evaluation['overall_score']:.1f}/5",
                 "✅" if pdf_success else "❌",
@@ -530,7 +1384,7 @@ def _process_top_pipeline_job(runner: CommandRunner) -> int:
         return merge_exit_code
 
     _mark_pipeline_job_processed(
-        top_job,
+        job,
         report_num=report_num,
         score=f"{evaluation['overall_score']:.1f}/5",
         pdf_success=pdf_success,
@@ -540,18 +1394,104 @@ def _process_top_pipeline_job(runner: CommandRunner) -> int:
     print("")
     print("Processing complete.")
     print("")
-    print(f"Job: {top_job.company} — {top_job.title}")
+    print(f"Job: {job.company} — {job.title}")
     print("")
     print("Generated:")
     print(f"- {report_path}")
-    print(f"- {html_path}")
-    print(f"- {pdf_path}")
+    for path in output_artifacts.generated_paths:
+        print(f"- {path}")
     print(f"- {_applications_path()} updated")
     print(f"- {_dashboard_path()} refreshed")
     print("")
     print("Pipeline status:")
     print("Pendientes -> Procesadas")
     return 0
+
+
+def _generate_process_output(
+    *,
+    posting: dict[str, str],
+    evaluation: dict[str, object],
+    jd_path: Path,
+    html_path: Path,
+    pdf_path: Path,
+    runner: CommandRunner,
+    output_mode: ProcessOutputMode,
+) -> ProcessOutputArtifacts:
+    if output_mode == "latex":
+        return _generate_latex_process_output(jd_path=jd_path, pdf_path=pdf_path)
+    return _generate_html_process_output(
+        posting=posting,
+        evaluation=evaluation,
+        html_path=html_path,
+        pdf_path=pdf_path,
+        runner=runner,
+    )
+
+
+def _generate_html_process_output(
+    *,
+    posting: dict[str, str],
+    evaluation: dict[str, object],
+    html_path: Path,
+    pdf_path: Path,
+    runner: CommandRunner,
+) -> ProcessOutputArtifacts:
+    html_path.write_text(_render_tailored_html(posting, evaluation), encoding="utf-8")
+
+    pdf_command = [
+        "npm",
+        "run",
+        "pdf",
+        "--",
+        str(html_path.relative_to(_repo_dir())),
+        str(pdf_path.relative_to(_repo_dir())),
+        f"--format={_paper_format(posting)}",
+    ]
+    pdf_exit_code = runner(pdf_command, _repo_dir())
+    return ProcessOutputArtifacts(
+        mode="html",
+        pdf_success=pdf_exit_code == 0,
+        generated_paths=[html_path, pdf_path],
+    )
+
+
+def _generate_latex_process_output(*, jd_path: Path, pdf_path: Path) -> ProcessOutputArtifacts:
+    generated_paths: list[Path] = []
+    tex_output_path = pdf_path.with_suffix(".tex")
+    log_output_path = pdf_path.with_suffix(".log")
+
+    try:
+        result = resume_pipeline.run_resume_pipeline(ROOT_DIR, jd_path=jd_path)
+    except (FileNotFoundError, ValueError) as exc:
+        print(f"LaTeX output failed: {exc}")
+        return ProcessOutputArtifacts(mode="latex", pdf_success=False, generated_paths=[pdf_path])
+
+    if result.current_tex_path.exists():
+        shutil.copyfile(result.current_tex_path, tex_output_path)
+        generated_paths.append(tex_output_path)
+    if result.log_path.exists():
+        shutil.copyfile(result.log_path, log_output_path)
+        generated_paths.append(log_output_path)
+
+    if not result.success:
+        print("LaTeX output failed.")
+        print(f"  Reason: {result.reason}")
+        print(f"  Working TeX: {result.current_tex_path}")
+        print(f"  Log: {result.log_path}")
+        print(f"  Pages: {result.page_count if result.page_count is not None else 'unknown'}")
+        return ProcessOutputArtifacts(
+            mode="latex",
+            pdf_success=False,
+            generated_paths=generated_paths + [pdf_path],
+        )
+
+    shutil.copyfile(result.pdf_path, pdf_path)
+    return ProcessOutputArtifacts(
+        mode="latex",
+        pdf_success=True,
+        generated_paths=generated_paths + [pdf_path],
+    )
 
 
 def _run_resume_command(args: list[str]) -> int:
@@ -649,18 +1589,58 @@ def _normalize_pipeline_field(value: str) -> str:
     return re.sub(r"\s+", " ", value.replace("|", " / ")).strip()
 
 
+def _looks_like_pending_location(value: str) -> bool:
+    lower = value.strip().lower()
+    if not lower:
+        return False
+    return bool(
+        "," in lower
+        or any(
+            keyword in lower
+            for keyword in (
+                "remote",
+                "hybrid",
+                "onsite",
+                "on-site",
+                "office",
+                "canada",
+                "united states",
+                "usa",
+                "taiwan",
+                "china",
+                "vancouver",
+                "toronto",
+                "taipei",
+                "new taipei",
+                "san francisco",
+                "seattle",
+                "austin",
+                "beijing",
+                "shanghai",
+                "shenzhen",
+            )
+        )
+    )
+
+
 def _parse_pending_pipeline_line(raw_line: str) -> PendingJob | None:
     line = raw_line.strip()
     if not line.startswith("- [ ] "):
         return None
     payload = line[6:].strip()
-    parts = [part.strip() for part in payload.split("|", 2)]
+    parts = [part.strip() for part in payload.split("|")]
     if len(parts) < 3:
         return None
+    location = ""
+    title_parts = parts[2:]
+    if len(title_parts) > 1 and _looks_like_pending_location(title_parts[-1]):
+        location = _normalize_pipeline_field(title_parts[-1])
+        title_parts = title_parts[:-1]
     return PendingJob(
         url=parts[0],
         company=_normalize_pipeline_field(parts[1]),
-        title=_normalize_pipeline_field(parts[2]),
+        title=_normalize_pipeline_field(" | ".join(title_parts)),
+        location=location,
         raw_line=raw_line,
     )
 
@@ -863,10 +1843,13 @@ def _dashboard_link(label: str, relative_path: str | None) -> str:
     return f"[{label}]({_relative_dashboard_link(relative_path)})"
 
 
-def _dashboard_last_updated(records: list[ApplicationRecord], latest_scan_date: str | None) -> str:
+def _dashboard_last_updated(records: list[ApplicationRecord], latest_scan_run: LatestScanRunSummary | None) -> str:
     candidates = [record.date for record in records if record.date]
-    if latest_scan_date:
-        candidates.append(latest_scan_date)
+    if latest_scan_run and latest_scan_run.date:
+        if latest_scan_run.time:
+            candidates.append(f"{latest_scan_run.date} {latest_scan_run.time}")
+        else:
+            candidates.append(latest_scan_run.date)
     return max(candidates) if candidates else _today_iso()
 
 
@@ -1015,11 +1998,12 @@ def _refresh_dashboard_file() -> Path:
 
     pending_jobs, processed_jobs = _load_pipeline_state()
     records = _load_application_records()
-    latest_scan_date, _latest_scan_count = _latest_scan_snapshot()
+    scan_target_state = _load_scan_target_state()
+    latest_scan_run = _load_latest_scan_run_summary()
     applied_count = sum(1 for record in records if record.status.lower() == "applied")
     interview_count = sum(1 for record in records if record.status.lower() == "interview")
     rejected_count = sum(1 for record in records if record.status.lower() == "rejected")
-    last_updated = _dashboard_last_updated(records, latest_scan_date)
+    last_updated = _dashboard_last_updated(records, latest_scan_run)
 
     content = "\n".join(
         [
@@ -1033,6 +2017,26 @@ def _refresh_dashboard_file() -> Path:
             f"- Interview: {interview_count}",
             f"- Rejected: {rejected_count}",
             f"- Last Updated: {last_updated}",
+            "",
+            "---",
+            "",
+            "## Current Scan Target",
+            "",
+            f"- Current target profile: {scan_target_state.label if scan_target_state else 'Not recorded yet'}",
+            f"- Focus areas: {_format_scan_target_values(scan_target_state.focus_labels) if scan_target_state else 'Not set'}",
+            f"- Locations: {_format_scan_target_values(scan_target_state.location_labels) if scan_target_state else 'Not set'}",
+            f"- Work modes: {_format_scan_target_values(scan_target_state.work_mode_labels) if scan_target_state else 'Not set'}",
+            "",
+            "---",
+            "",
+            "## Latest Scan Run",
+            "",
+            f"- Completed at: {f'{latest_scan_run.date} {latest_scan_run.time}'.strip() if latest_scan_run else 'Not recorded yet'}",
+            f"- Latest target profile: {latest_scan_run.target_label if latest_scan_run and latest_scan_run.target_label else 'Not recorded yet'}",
+            f"- Current scan matches: {latest_scan_run.scored_scan_matches if latest_scan_run else 0}",
+            f"- Pending queue rebuilt: {latest_scan_run.pending_queue_rebuilt if latest_scan_run else 0}",
+            f"- New unique offers added to history: {latest_scan_run.new_offers_discovered if latest_scan_run else 0}",
+            f"- Daily scan log: {_dashboard_link('Open', latest_scan_run.daily_log_path if latest_scan_run and latest_scan_run.daily_log_path else None)}",
             "",
             "---",
             "",
@@ -1072,6 +2076,7 @@ def _refresh_dashboard_file() -> Path:
             "",
             "- [Pipeline](pipeline.md)",
             "- [Applications](applications.md)",
+            f"- Latest Scan Log: {_dashboard_link('Open', latest_scan_run.daily_log_path if latest_scan_run and latest_scan_run.daily_log_path else None)}",
             "- [Scan History](scan-history.tsv)",
             "- [Reports](../reports/)",
             "- [Outputs](../output/)",
@@ -1605,7 +2610,14 @@ def _section_body(markdown: str, title: str) -> str:
 
 def _parse_markdown_entries(section_body: str) -> list[dict[str, object]]:
     entries: list[dict[str, object]] = []
-    for match in re.finditer(r"^### (?P<title>.+)\n(?P<body>.*?)(?=^### |\Z)", section_body, flags=re.MULTILINE | re.DOTALL):
+    if not section_body.strip():
+        return entries
+
+    for match in re.finditer(
+        r"^### (?P<title>[^\n]+)\n(?P<body>.*?)(?=^### |\Z)",
+        section_body,
+        flags=re.MULTILINE | re.DOTALL,
+    ):
         title = match.group("title").strip()
         body_lines = [line.rstrip() for line in match.group("body").splitlines()]
         role = ""

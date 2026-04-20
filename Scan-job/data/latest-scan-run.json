@@ -1,0 +1,886 @@
+{
+  "date": "2026-04-17",
+  "time": "08:43:05",
+  "target_label": "Custom target profile",
+  "focus_labels": [
+    "Software Engineering",
+    "Web3 / Blockchain",
+    "AI / Applied AI",
+    "Java Development"
+  ],
+  "location_labels": [
+    "United States",
+    "Canada"
+  ],
+  "work_mode_labels": [
+    "Remote"
+  ],
+  "focus_keywords": [
+    "software engineer",
+    "software developer",
+    "full stack",
+    "full-stack",
+    "developer",
+    "engineer",
+    "frontend",
+    "backend",
+    "platform engineer",
+    "web3",
+    "blockchain",
+    "smart contract",
+    "solidity",
+    "protocol engineer",
+    "dapp",
+    "dao",
+    "ai",
+    "artificial intelligence",
+    "llm",
+    "machine learning",
+    "ml",
+    "agent",
+    "agentic",
+    "automation",
+    "java",
+    "kotlin",
+    "jvm",
+    "spring",
+    "android"
+  ],
+  "location_keywords": [
+    "united states",
+    "usa",
+    "us",
+    "new york",
+    "san francisco",
+    "seattle",
+    "austin",
+    "remote - us",
+    "us remote",
+    "canada",
+    "vancouver",
+    "toronto",
+    "montreal",
+    "calgary",
+    "remote - canada"
+  ],
+  "work_mode_keywords": [
+    "remote",
+    "distributed",
+    "work from anywhere",
+    "work from home",
+    "fully remote"
+  ],
+  "companies_scanned": 73,
+  "total_jobs_found": 5041,
+  "filtered_by_title": 2944,
+  "filtered_by_location": 1338,
+  "filtered_by_work_mode": 648,
+  "duplicates": 2,
+  "new_offers_discovered": 0,
+  "pending_queue_rebuilt": 109,
+  "scored_scan_matches": 109,
+  "matches": [
+    {
+      "company": "n8n",
+      "title": "Head of Developer Relations (Remote, East Coast or Europe)",
+      "location": "New York",
+      "priorityScore": 413,
+      "url": "https://jobs.ashbyhq.com/n8n/a8aea5b5-bde5-491e-adc0-affde5b3af3d"
+    },
+    {
+      "company": "n8n",
+      "title": "Senior Support Engineer | Remote | North America ",
+      "location": "United States",
+      "priorityScore": 413,
+      "url": "https://jobs.ashbyhq.com/n8n/38d5cc73-7799-47ca-9507-c601476f2c4b"
+    },
+    {
+      "company": "Anthropic",
+      "title": "Anthropic Fellows Program — AI Safety",
+      "location": "London, UK; Ontario, CAN; Remote-Friendly, United States; San Francisco, CA",
+      "priorityScore": 410,
+      "url": "https://job-boards.greenhouse.io/anthropic/jobs/5183044008"
+    },
+    {
+      "company": "Anthropic",
+      "title": "Anthropic Fellows Program — AI Security",
+      "location": "London, UK; Ontario, CAN; Remote-Friendly, United States; San Francisco, CA",
+      "priorityScore": 410,
+      "url": "https://job-boards.greenhouse.io/anthropic/jobs/5030244008"
+    },
+    {
+      "company": "Anthropic",
+      "title": "Anthropic Fellows Program — ML Systems & Performance",
+      "location": "London, UK; Ontario, CAN; Remote-Friendly, United States; San Francisco, CA",
+      "priorityScore": 410,
+      "url": "https://job-boards.greenhouse.io/anthropic/jobs/5183051008"
+    },
+    {
+      "company": "Deepgram",
+      "title": "Backend Software Engineer - Engine Team (Voice Agent)",
+      "location": "USA | Remote",
+      "priorityScore": 340,
+      "url": "https://jobs.ashbyhq.com/deepgram/7c7064bb-2bf0-4f64-81cc-14afe79a15c1"
+    },
+    {
+      "company": "Arize AI",
+      "title": "Senior AI Product Engineer, Backend",
+      "location": "Remote (United States)",
+      "priorityScore": 333,
+      "url": "https://job-boards.greenhouse.io/arizeai/jobs/5396396004"
+    },
+    {
+      "company": "Airtable",
+      "title": "Software Engineer, Product Backend (4-8 YOE)",
+      "location": "San Francisco, CA; New York, NY; Remote - US (Seattle, WA only)",
+      "priorityScore": 330,
+      "url": "https://job-boards.greenhouse.io/airtable/jobs/8397515002"
+    },
+    {
+      "company": "Airtable",
+      "title": "Software Engineer, Product Backend (8+ YOE)",
+      "location": "San Francisco, CA; Remote - US (Seattle, WA only)",
+      "priorityScore": 330,
+      "url": "https://job-boards.greenhouse.io/airtable/jobs/8397618002"
+    },
+    {
+      "company": "Airtable",
+      "title": "Software Engineer, Product Frontend (2-8 YOE)",
+      "location": "San Francisco, CA; New York, NY; Remote - US (Seattle, WA only)",
+      "priorityScore": 330,
+      "url": "https://job-boards.greenhouse.io/airtable/jobs/8397137002"
+    },
+    {
+      "company": "Deepgram",
+      "title": "Backend Software Engineer - Active Learning Team",
+      "location": "USA | Remote",
+      "priorityScore": 330,
+      "url": "https://jobs.ashbyhq.com/deepgram/0796cc37-96a7-4158-8a00-155962da275a"
+    },
+    {
+      "company": "Deepgram",
+      "title": "Site Reliability Engineer - AI & ML Infrastructure (Kubernetes, AWS & Terraform)",
+      "location": "USA | Remote",
+      "priorityScore": 330,
+      "url": "https://jobs.ashbyhq.com/deepgram/f424ef6a-c27f-4984-9e77-40a1ad16ae28"
+    },
+    {
+      "company": "RunPod",
+      "title": "Software Engineer (Full-Stack) ",
+      "location": "Remote, USA",
+      "priorityScore": 330,
+      "url": "https://job-boards.greenhouse.io/runpod/jobs/4785681008"
+    },
+    {
+      "company": "Vercel",
+      "title": "Software Engineer, Backend",
+      "location": "Remote - United States",
+      "priorityScore": 330,
+      "url": "https://job-boards.greenhouse.io/vercel/jobs/5431123004"
+    },
+    {
+      "company": "Vercel",
+      "title": "Software Engineer, Domains",
+      "location": "Remote - United States",
+      "priorityScore": 330,
+      "url": "https://job-boards.greenhouse.io/vercel/jobs/5813134004"
+    },
+    {
+      "company": "Pinecone",
+      "title": "Senior/Staff Software Engineer, Experience Platform",
+      "location": "US Remote",
+      "priorityScore": 326,
+      "url": "https://jobs.ashbyhq.com/pinecone/773e953d-8f53-4313-93b4-35a553bad1cb"
+    },
+    {
+      "company": "Pinecone",
+      "title": "Senior/Staff Software Engineer, Search & Retrieval Infrastructure",
+      "location": "US Remote",
+      "priorityScore": 326,
+      "url": "https://jobs.ashbyhq.com/pinecone/7ef089cb-a721-4ad8-a6d0-c390e64991d2"
+    },
+    {
+      "company": "Arize AI",
+      "title": "Senior AI Product Engineer, Fullstack",
+      "location": "Remote (United States)",
+      "priorityScore": 323,
+      "url": "https://job-boards.greenhouse.io/arizeai/jobs/5396420004"
+    },
+    {
+      "company": "Deepgram",
+      "title": "Senior Software Engineer,  Mobile - Saga Team",
+      "location": "USA | Remote",
+      "priorityScore": 323,
+      "url": "https://jobs.ashbyhq.com/deepgram/fb61505f-d3b3-4c43-90a7-6d02f3fd112d"
+    },
+    {
+      "company": "RunPod",
+      "title": "Senior Software Engineer (Cloud) ",
+      "location": "Remote, USA ",
+      "priorityScore": 323,
+      "url": "https://job-boards.greenhouse.io/runpod/jobs/4142227008"
+    },
+    {
+      "company": "RunPod",
+      "title": "Sr Director of Software Engineering - Product & Platform Delivery",
+      "location": "Remote, USA",
+      "priorityScore": 323,
+      "url": "https://job-boards.greenhouse.io/runpod/jobs/5020167008"
+    },
+    {
+      "company": "Vercel",
+      "title": "Senior Software Engineer, Trust & Safety",
+      "location": "Remote - United States",
+      "priorityScore": 323,
+      "url": "https://job-boards.greenhouse.io/vercel/jobs/5788954004"
+    },
+    {
+      "company": "Airtable",
+      "title": "AI Agent Architect, Customer Experience",
+      "location": "Remote - US",
+      "priorityScore": 320,
+      "url": "https://job-boards.greenhouse.io/airtable/jobs/8409168002"
+    },
+    {
+      "company": "Airtable",
+      "title": "Software Engineer, Compute (8+ YOE)",
+      "location": "San Francisco, CA; New York, NY; Remote - US",
+      "priorityScore": 320,
+      "url": "https://job-boards.greenhouse.io/airtable/jobs/8442397002"
+    },
+    {
+      "company": "Airtable",
+      "title": "Software Engineer, Infrastructure (2-8 YOE)",
+      "location": "San Francisco, CA; New York, NY; Remote - US (Seattle, WA only)",
+      "priorityScore": 320,
+      "url": "https://job-boards.greenhouse.io/airtable/jobs/8400373002"
+    },
+    {
+      "company": "Airtable",
+      "title": "Software Engineer, Infrastructure (8+ YOE)",
+      "location": "San Francisco, CA; New York, NY; Remote - US (Seattle, WA only)",
+      "priorityScore": 320,
+      "url": "https://job-boards.greenhouse.io/airtable/jobs/8400388002"
+    },
+    {
+      "company": "Airtable",
+      "title": "Software Engineer, Observability",
+      "location": "San Francisco, CA; New York, NY; Remote (Seattle, WA only)",
+      "priorityScore": 320,
+      "url": "https://job-boards.greenhouse.io/airtable/jobs/8400374002"
+    },
+    {
+      "company": "Anthropic",
+      "title": "Research Engineer, Agents",
+      "location": "Remote-Friendly (Travel-Required) | San Francisco, CA | Seattle, WA | New York City, NY",
+      "priorityScore": 320,
+      "url": "https://job-boards.greenhouse.io/anthropic/jobs/4017544008"
+    },
+    {
+      "company": "Anthropic",
+      "title": "Research Engineer/Research Scientist, Pre-training",
+      "location": "Remote-Friendly (Travel-Required) | San Francisco, CA | Seattle, WA | New York City, NY",
+      "priorityScore": 320,
+      "url": "https://job-boards.greenhouse.io/anthropic/jobs/4616971008"
+    },
+    {
+      "company": "Arize AI",
+      "title": "AI Engineer, Instrumentation",
+      "location": "Remote (United States)",
+      "priorityScore": 320,
+      "url": "https://job-boards.greenhouse.io/arizeai/jobs/5661972004"
+    },
+    {
+      "company": "Arize AI",
+      "title": "AI Sales Engineer, US",
+      "location": "Remote (United States)",
+      "priorityScore": 320,
+      "url": "https://job-boards.greenhouse.io/arizeai/jobs/5792327004"
+    },
+    {
+      "company": "Arize AI",
+      "title": "AI Solutions Engineer ",
+      "location": "San Francisco (Remote)",
+      "priorityScore": 320,
+      "url": "https://job-boards.greenhouse.io/arizeai/jobs/5797408004"
+    },
+    {
+      "company": "Arize AI",
+      "title": "Developer Relations Engineer",
+      "location": "Remote (San Francisco)",
+      "priorityScore": 320,
+      "url": "https://job-boards.greenhouse.io/arizeai/jobs/5704428004"
+    },
+    {
+      "company": "Deepgram",
+      "title": "AI/ML Talent Researcher",
+      "location": "USA | Remote",
+      "priorityScore": 320,
+      "url": "https://jobs.ashbyhq.com/deepgram/12a8a8ea-5a58-4640-8974-ae257b2405a4"
+    },
+    {
+      "company": "Deepgram",
+      "title": "Backend Engineer- Inference Services",
+      "location": "USA | Remote",
+      "priorityScore": 320,
+      "url": "https://jobs.ashbyhq.com/deepgram/1ab00006-f525-4e2d-a1a9-5cab4264637b"
+    },
+    {
+      "company": "Deepgram",
+      "title": "ML Ops Infrastructure Engineer",
+      "location": "USA | Remote",
+      "priorityScore": 320,
+      "url": "https://jobs.ashbyhq.com/deepgram/7ced4c1f-4126-44fe-9cf1-da427a9e4e3e"
+    },
+    {
+      "company": "Deepgram",
+      "title": "Research Engineer, Machine Learning Systems",
+      "location": "USA | Remote",
+      "priorityScore": 320,
+      "url": "https://jobs.ashbyhq.com/deepgram/9a030b32-d671-43e0-a221-4653bb73ba29"
+    },
+    {
+      "company": "Deepgram",
+      "title": "Systems Architect AI/ML Infrastructure",
+      "location": "USA | Remote",
+      "priorityScore": 320,
+      "url": "https://jobs.ashbyhq.com/deepgram/ff392127-1eb6-4fc7-838e-a3243923ba76"
+    },
+    {
+      "company": "PlanetScale",
+      "title": "Software Engineer - Infrastructure",
+      "location": "San Francisco Bay Area or Remote",
+      "priorityScore": 320,
+      "url": "https://job-boards.greenhouse.io/planetscale/jobs/4036240009"
+    },
+    {
+      "company": "Resend",
+      "title": "Developer Experience Engineer ",
+      "location": "United States / Remote / Full-time",
+      "priorityScore": 320,
+      "url": "https://jobs.ashbyhq.com/resend/06bd9cb2-d189-41b6-baf7-42bd5da9610f"
+    },
+    {
+      "company": "Vercel",
+      "title": "Anti-Abuse Automation Engineer",
+      "location": "Remote - United States",
+      "priorityScore": 320,
+      "url": "https://job-boards.greenhouse.io/vercel/jobs/5843010004"
+    },
+    {
+      "company": "Vercel",
+      "title": "Software Engineer, CDN Security",
+      "location": "Remote - United States",
+      "priorityScore": 320,
+      "url": "https://job-boards.greenhouse.io/vercel/jobs/5473266004"
+    },
+    {
+      "company": "Vercel",
+      "title": "Software Engineer, Compute",
+      "location": "Remote - United States",
+      "priorityScore": 320,
+      "url": "https://job-boards.greenhouse.io/vercel/jobs/5551619004"
+    },
+    {
+      "company": "Vercel",
+      "title": "Software Engineer, Lua",
+      "location": "Remote - United States",
+      "priorityScore": 320,
+      "url": "https://job-boards.greenhouse.io/vercel/jobs/5661583004"
+    },
+    {
+      "company": "Airtable",
+      "title": "Senior Contracts Manager, Procurement and AI",
+      "location": "San Francisco, CA; New York, NY; Austin, TX; Remote - US",
+      "priorityScore": 313,
+      "url": "https://job-boards.greenhouse.io/airtable/jobs/8350839002"
+    },
+    {
+      "company": "Anthropic",
+      "title": "Research Lead, Training Insights",
+      "location": "Remote-Friendly (Travel Required) | San Francisco, CA; San Francisco, CA | New York City, NY",
+      "priorityScore": 313,
+      "url": "https://job-boards.greenhouse.io/anthropic/jobs/5139654008"
+    },
+    {
+      "company": "Arize AI",
+      "title": "Senior Open Source Design Engineer",
+      "location": "Remote (United States)",
+      "priorityScore": 313,
+      "url": "https://job-boards.greenhouse.io/arizeai/jobs/5778086004"
+    },
+    {
+      "company": "Celonis",
+      "title": "Senior Customer Support Engineer",
+      "location": "Remote, US, Washington DC",
+      "priorityScore": 313,
+      "url": "https://job-boards.greenhouse.io/celonis/jobs/7544809003?gh_jid=7544809003"
+    },
+    {
+      "company": "Celonis",
+      "title": "Senior Value Engineer - Energy Industry",
+      "location": "Remote, US, Texas",
+      "priorityScore": 313,
+      "url": "https://job-boards.greenhouse.io/celonis/jobs/7680930003?gh_jid=7680930003"
+    },
+    {
+      "company": "Celonis",
+      "title": "Senior Value Engineer (Public Sector) - Sacramento, CA",
+      "location": "Remote, US, California",
+      "priorityScore": 313,
+      "url": "https://job-boards.greenhouse.io/celonis/jobs/7688214003?gh_jid=7688214003"
+    },
+    {
+      "company": "Deepgram",
+      "title": "Research Staff, LLMs",
+      "location": "USA | Remote",
+      "priorityScore": 313,
+      "url": "https://jobs.ashbyhq.com/deepgram/39c2b79b-0269-4711-9354-be5ccf747a98"
+    },
+    {
+      "company": "Deepgram",
+      "title": "Research Staff, Voice AI Foundations",
+      "location": "USA | Remote",
+      "priorityScore": 313,
+      "url": "https://jobs.ashbyhq.com/deepgram/7cf277bc-a192-4007-a77a-fafbf8276a5e"
+    },
+    {
+      "company": "Deepgram",
+      "title": "Senior Data Intelligence Engineer",
+      "location": "USA | Remote",
+      "priorityScore": 313,
+      "url": "https://jobs.ashbyhq.com/deepgram/ae992d89-1bb3-4bea-ae91-0a07043e9756"
+    },
+    {
+      "company": "Deepgram",
+      "title": "Senior Developer Advocate, Partner Ecosystem",
+      "location": "USA | Remote",
+      "priorityScore": 313,
+      "url": "https://jobs.ashbyhq.com/deepgram/5e26347c-f7c6-412c-93c8-2b162d546cc1"
+    },
+    {
+      "company": "n8n",
+      "title": "Senior Solutions Engineer | East Coast - Remote",
+      "location": "New York",
+      "priorityScore": 313,
+      "url": "https://jobs.ashbyhq.com/n8n/788662b7-6b2b-4b07-b466-bf131fd95d08"
+    },
+    {
+      "company": "n8n",
+      "title": "Senior Solutions Engineer | West Coast - Remote",
+      "location": "San Francisco",
+      "priorityScore": 313,
+      "url": "https://jobs.ashbyhq.com/n8n/53da0231-00c9-4aae-80e3-16d3a93c3381"
+    },
+    {
+      "company": "Vercel",
+      "title": "Senior Customer Support Engineer",
+      "location": "Remote - Australia",
+      "priorityScore": 313,
+      "url": "https://job-boards.greenhouse.io/vercel/jobs/5817808004"
+    },
+    {
+      "company": "Vercel",
+      "title": "Senior Product Security Engineer",
+      "location": "Remote - United States",
+      "priorityScore": 313,
+      "url": "https://job-boards.greenhouse.io/vercel/jobs/5787232004"
+    },
+    {
+      "company": "Airtable",
+      "title": "Product Security Engineer",
+      "location": "San Francisco, CA; New York, NY; Remote (Seattle, WA only)",
+      "priorityScore": 310,
+      "url": "https://job-boards.greenhouse.io/airtable/jobs/8194662002"
+    },
+    {
+      "company": "Airtable",
+      "title": "Professional Services Engineer (East Coast)",
+      "location": "Remote - US",
+      "priorityScore": 310,
+      "url": "https://job-boards.greenhouse.io/airtable/jobs/8432883002"
+    },
+    {
+      "company": "Airtable",
+      "title": "Program Manager, AI Programs",
+      "location": "Remote - US",
+      "priorityScore": 310,
+      "url": "https://job-boards.greenhouse.io/airtable/jobs/8382158002"
+    },
+    {
+      "company": "Anthropic",
+      "title": "Application Security Engineer",
+      "location": "Remote-Friendly (Travel-Required) | San Francisco, CA | Seattle, WA | New York City, NY",
+      "priorityScore": 310,
+      "url": "https://job-boards.greenhouse.io/anthropic/jobs/4502508008"
+    },
+    {
+      "company": "Anthropic",
+      "title": "Cluster Deployment Engineer",
+      "location": "Remote-Friendly, United States",
+      "priorityScore": 310,
+      "url": "https://job-boards.greenhouse.io/anthropic/jobs/5191638008"
+    },
+    {
+      "company": "Anthropic",
+      "title": "Data Center Electrical Engineer",
+      "location": "Remote-Friendly, United States",
+      "priorityScore": 310,
+      "url": "https://job-boards.greenhouse.io/anthropic/jobs/5187486008"
+    },
+    {
+      "company": "Anthropic",
+      "title": "Data Center Engineer, Resource Efficiency – Compute Supply ",
+      "location": "Remote-Friendly, United States",
+      "priorityScore": 310,
+      "url": "https://job-boards.greenhouse.io/anthropic/jobs/5159642008"
+    },
+    {
+      "company": "Anthropic",
+      "title": "Engineering Manager, People Products",
+      "location": "Remote-Friendly (Travel Required) | San Francisco, CA",
+      "priorityScore": 310,
+      "url": "https://job-boards.greenhouse.io/anthropic/jobs/5119478008"
+    },
+    {
+      "company": "Anthropic",
+      "title": "IT Systems Engineer, Corporate Systems & Infrastructure",
+      "location": "Remote-Friendly (Travel-Required) | San Francisco, CA | Seattle, WA | New York City, NY",
+      "priorityScore": 310,
+      "url": "https://job-boards.greenhouse.io/anthropic/jobs/4887952008"
+    },
+    {
+      "company": "Anthropic",
+      "title": "IT Systems Engineer, Enterprise SaaS",
+      "location": "Remote-Friendly (Travel-Required) | San Francisco, CA | Seattle, WA | New York City, NY",
+      "priorityScore": 310,
+      "url": "https://job-boards.greenhouse.io/anthropic/jobs/5161882008"
+    },
+    {
+      "company": "Anthropic",
+      "title": "Research Engineer, Environment Scaling",
+      "location": "Remote-Friendly (Travel Required) | San Francisco, CA",
+      "priorityScore": 310,
+      "url": "https://job-boards.greenhouse.io/anthropic/jobs/4951064008"
+    },
+    {
+      "company": "Anthropic",
+      "title": "Research Engineer, Reward Models Platform",
+      "location": "Remote-Friendly (Travel-Required) | San Francisco, CA | Seattle, WA | New York City, NY",
+      "priorityScore": 310,
+      "url": "https://job-boards.greenhouse.io/anthropic/jobs/5024831008"
+    },
+    {
+      "company": "Anthropic",
+      "title": "Research Engineer, Universes",
+      "location": "Remote-Friendly (Travel-Required) | San Francisco, CA | Seattle, WA | New York City, NY",
+      "priorityScore": 310,
+      "url": "https://job-boards.greenhouse.io/anthropic/jobs/5061517008"
+    },
+    {
+      "company": "Anthropic",
+      "title": "Security Engineer, Offensive Security",
+      "location": "Remote-Friendly (Travel-Required) | San Francisco, CA | Seattle, WA",
+      "priorityScore": 310,
+      "url": "https://job-boards.greenhouse.io/anthropic/jobs/5105509008"
+    },
+    {
+      "company": "Anthropic",
+      "title": "Threat Collections Engineer",
+      "location": "Remote-Friendly (Travel-Required) | San Francisco, CA | Washington, DC",
+      "priorityScore": 310,
+      "url": "https://job-boards.greenhouse.io/anthropic/jobs/5074937008"
+    },
+    {
+      "company": "Arize AI",
+      "title": "AI Product Manager",
+      "location": "United States (Remote)",
+      "priorityScore": 310,
+      "url": "https://job-boards.greenhouse.io/arizeai/jobs/5818115004"
+    },
+    {
+      "company": "Arize AI",
+      "title": "Engineering Manager - Product & Platform",
+      "location": "Remote (United States)",
+      "priorityScore": 310,
+      "url": "https://job-boards.greenhouse.io/arizeai/jobs/5421310004"
+    },
+    {
+      "company": "Celonis",
+      "title": "Account Executive - Retail",
+      "location": "Remote, US, Minnesota",
+      "priorityScore": 310,
+      "url": "https://job-boards.greenhouse.io/celonis/jobs/7493307003?gh_jid=7493307003"
+    },
+    {
+      "company": "Cradle",
+      "title": "Solutions Consultant, Machine Learning",
+      "location": "US East (Remote)",
+      "priorityScore": 310,
+      "url": "https://jobs.ashbyhq.com/cradlebio/cbf8f13a-0606-4553-bc3c-2d18ece58b2a"
+    },
+    {
+      "company": "Deepgram",
+      "title": "Audio Engineer",
+      "location": "USA | Remote",
+      "priorityScore": 310,
+      "url": "https://jobs.ashbyhq.com/deepgram/96812d52-f0e8-4828-8020-f6e92201cbd5"
+    },
+    {
+      "company": "Deepgram",
+      "title": "Customer Success Engineer (Americas)",
+      "location": "USA | Remote",
+      "priorityScore": 310,
+      "url": "https://jobs.ashbyhq.com/deepgram/faef2c32-5084-48ca-8fff-e86d653f2697"
+    },
+    {
+      "company": "Deepgram",
+      "title": "Engineering Manager, Active Learning",
+      "location": "USA | Remote",
+      "priorityScore": 310,
+      "url": "https://jobs.ashbyhq.com/deepgram/4e87eb01-262c-4978-9a29-b8cdf09386df"
+    },
+    {
+      "company": "Deepgram",
+      "title": "Engineering Manager, Engine Team",
+      "location": "USA | Remote",
+      "priorityScore": 310,
+      "url": "https://jobs.ashbyhq.com/deepgram/d6558e6d-cefe-41f1-97aa-21e964cab0f4"
+    },
+    {
+      "company": "Deepgram",
+      "title": "Network Engineer, Real-Time Infrastructure",
+      "location": "USA | Remote",
+      "priorityScore": 310,
+      "url": "https://jobs.ashbyhq.com/deepgram/b4c48280-9b6c-4545-be49-b33e0b6076cd"
+    },
+    {
+      "company": "Deepgram",
+      "title": "Pre-Sales Solutions Engineer (EST or PST)",
+      "location": "USA | Remote",
+      "priorityScore": 310,
+      "url": "https://jobs.ashbyhq.com/deepgram/1395ef4d-883a-4006-85a1-4e7d44623431"
+    },
+    {
+      "company": "Glean",
+      "title": "AI Outcomes Manager, Central",
+      "location": "Remote - US",
+      "priorityScore": 310,
+      "url": "https://job-boards.greenhouse.io/gleanwork/jobs/4661913005"
+    },
+    {
+      "company": "Glean",
+      "title": "AI Outcomes Manager, East",
+      "location": "Remote - US",
+      "priorityScore": 310,
+      "url": "https://job-boards.greenhouse.io/gleanwork/jobs/4661934005"
+    },
+    {
+      "company": "Glean",
+      "title": "AI Outcomes Manager, West",
+      "location": "Remote - US",
+      "priorityScore": 310,
+      "url": "https://job-boards.greenhouse.io/gleanwork/jobs/4661899005"
+    },
+    {
+      "company": "Glean",
+      "title": "Designated Technical Support Engineer",
+      "location": "Remote - US",
+      "priorityScore": 310,
+      "url": "https://job-boards.greenhouse.io/gleanwork/jobs/4520716005"
+    },
+    {
+      "company": "Glean",
+      "title": "Founding Forward Deployed Engineer",
+      "location": "Remote - US",
+      "priorityScore": 310,
+      "url": "https://job-boards.greenhouse.io/gleanwork/jobs/4651991005"
+    },
+    {
+      "company": "Glean",
+      "title": "Manager, AI Outcomes ",
+      "location": "Remote - US",
+      "priorityScore": 310,
+      "url": "https://job-boards.greenhouse.io/gleanwork/jobs/4667085005"
+    },
+    {
+      "company": "Glean",
+      "title": "Security Engineer, Cloud Security",
+      "location": "Remote - US",
+      "priorityScore": 310,
+      "url": "https://job-boards.greenhouse.io/gleanwork/jobs/4650994005"
+    },
+    {
+      "company": "Glean",
+      "title": "Strategic Solutions Engineer, East",
+      "location": "Remote - US",
+      "priorityScore": 310,
+      "url": "https://job-boards.greenhouse.io/gleanwork/jobs/4620264005"
+    },
+    {
+      "company": "Hightouch",
+      "title": "AI Operations, GTM",
+      "location": "Remote, United States",
+      "priorityScore": 310,
+      "url": "https://job-boards.greenhouse.io/hightouch/jobs/5823552004"
+    },
+    {
+      "company": "Inngest",
+      "title": "Developer Content Marketer",
+      "location": "US/Remote",
+      "priorityScore": 310,
+      "url": "https://jobs.ashbyhq.com/inngest/67dddf56-5b29-48e0-81bb-b970f7cb6e1a"
+    },
+    {
+      "company": "Inngest",
+      "title": "Distributed Systems Engineer - Platform",
+      "location": "US/Remote",
+      "priorityScore": 310,
+      "url": "https://jobs.ashbyhq.com/inngest/ae72d036-b98b-4abb-8454-a687870cf0ca"
+    },
+    {
+      "company": "Palantir",
+      "title": "Application Security Engineer",
+      "location": "Remote: United States",
+      "priorityScore": 310,
+      "url": "https://jobs.lever.co/palantir/ce813413-de04-4a7b-a796-43735f55bf0c"
+    },
+    {
+      "company": "Palantir",
+      "title": "Product Infrastructure Security Engineer",
+      "location": "Remote: US - East",
+      "priorityScore": 310,
+      "url": "https://jobs.lever.co/palantir/0f077970-31ad-45b4-ae76-458a134b705f"
+    },
+    {
+      "company": "PlanetScale",
+      "title": "Developer Educator",
+      "location": "San Francisco and/or Remote",
+      "priorityScore": 310,
+      "url": "https://job-boards.greenhouse.io/planetscale/jobs/4021848009"
+    },
+    {
+      "company": "RunPod",
+      "title": "Developer Relations Community Manager ",
+      "location": "Remote, USA",
+      "priorityScore": 310,
+      "url": "https://job-boards.greenhouse.io/runpod/jobs/5191760008"
+    },
+    {
+      "company": "RunPod",
+      "title": "Engineering Manager - Product & Platform Delivery",
+      "location": "Remote, USA",
+      "priorityScore": 310,
+      "url": "https://job-boards.greenhouse.io/runpod/jobs/5020164008"
+    },
+    {
+      "company": "RunPod",
+      "title": "Manager, Datacenter Network Engineering ",
+      "location": "Remote, USA",
+      "priorityScore": 310,
+      "url": "https://job-boards.greenhouse.io/runpod/jobs/5099082008"
+    },
+    {
+      "company": "RunPod",
+      "title": "Manager, HPC Storage Engineer",
+      "location": "Remote, USA",
+      "priorityScore": 310,
+      "url": "https://job-boards.greenhouse.io/runpod/jobs/5099089008"
+    },
+    {
+      "company": "RunPod",
+      "title": "Security Engineer",
+      "location": "Remote, USA",
+      "priorityScore": 310,
+      "url": "https://job-boards.greenhouse.io/runpod/jobs/4118412008"
+    },
+    {
+      "company": "Vercel",
+      "title": "Design Engineer",
+      "location": "Remote - United States",
+      "priorityScore": 310,
+      "url": "https://job-boards.greenhouse.io/vercel/jobs/5709080004"
+    },
+    {
+      "company": "Vercel",
+      "title": "Forward Deployed Engineer, v0",
+      "location": "Remote - United States",
+      "priorityScore": 310,
+      "url": "https://job-boards.greenhouse.io/vercel/jobs/5872425004"
+    },
+    {
+      "company": "Vercel",
+      "title": "Site Engineer",
+      "location": "Remote - United States",
+      "priorityScore": 310,
+      "url": "https://job-boards.greenhouse.io/vercel/jobs/5732855004"
+    },
+    {
+      "company": "Parloa",
+      "title": "Software Engineer, GTM",
+      "location": "Remotely in the USA",
+      "priorityScore": 120,
+      "url": "https://job-boards.eu.greenhouse.io/parloa/jobs/4843556101"
+    },
+    {
+      "company": "Parloa",
+      "title": "Senior/Lead Forward Deployed Engineer - US",
+      "location": "New York Office; Remotely in the USA",
+      "priorityScore": 116,
+      "url": "https://job-boards.eu.greenhouse.io/parloa/jobs/4604587101"
+    },
+    {
+      "company": "Parloa",
+      "title": "Forward Deployed Engineer, VoIP",
+      "location": "New York Office; Remotely in the USA",
+      "priorityScore": 110,
+      "url": "https://job-boards.eu.greenhouse.io/parloa/jobs/4799672101"
+    },
+    {
+      "company": "Parloa",
+      "title": "Partner Solution Engineer ",
+      "location": "Remotely in the USA",
+      "priorityScore": 110,
+      "url": "https://job-boards.eu.greenhouse.io/parloa/jobs/4780830101"
+    }
+  ],
+  "errors": [
+    {
+      "company": "Ada",
+      "error": "HTTP 404"
+    },
+    {
+      "company": "Travelperk",
+      "error": "HTTP 404"
+    },
+    {
+      "company": "Tinybird",
+      "error": "HTTP 404"
+    },
+    {
+      "company": "Weights & Biases",
+      "error": "HTTP 404"
+    },
+    {
+      "company": "Factorial",
+      "error": "HTTP 404"
+    },
+    {
+      "company": "Clarity AI",
+      "error": "HTTP 404"
+    },
+    {
+      "company": "Forto",
+      "error": "HTTP 404"
+    },
+    {
+      "company": "Runway",
+      "error": "HTTP 404"
+    },
+    {
+      "company": "Vinted",
+      "error": "HTTP 404"
+    }
+  ],
+  "daily_log_path": "data/scan-runs/2026-04-17.md"
+}

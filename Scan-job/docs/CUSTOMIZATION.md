@@ -1,76 +1,90 @@
 # Customization Guide
 
-## Profile (config/profile.yml)
+This project is easiest to maintain when each kind of customization has one
+clear home.
 
-This is the single source of truth for your identity. All modes read from here.
+## 1. CV Facts: `cv.md`
 
-Key sections:
-- **candidate**: Name, email, phone, location, LinkedIn, portfolio
-- **target_roles**: Your North Star roles and archetypes
-- **narrative**: Your headline, exit story, superpowers, proof points
-- **compensation**: Target range, minimum, currency
-- **location**: Country, timezone, visa status, on-site availability
+Put the source facts of your resume here:
 
-## Target Roles (modes/_profile.md)
+- summary
+- experience
+- projects
+- education
+- skills
 
-The archetype table in `_profile.md` determines how offers are scored and CVs are framed. Edit the table to match YOUR career targets:
+Treat `cv.md` as the factual source. Tailoring should pull from here, not from
+scattered docs.
 
-```markdown
-| Archetype | Thematic axes | What they buy |
-|-----------|---------------|---------------|
-| **Your Role 1** | key skills | what they need |
-| **Your Role 2** | key skills | what they need |
-```
+## 2. Candidate Identity + Targets: `config/profile.yml`
 
-Also update the "Adaptive Framing" table to map YOUR specific projects to each archetype.
+Use `profile.yml` for structured preferences and reusable targeting:
 
-## Portals (portals.yml)
+- candidate identity
+- target roles
+- compensation expectations
+- location policy
+- scan targeting lists
 
-Copy from `templates/portals.example.yml` and customize:
+The `targeting` section now powers Task 5 choices for:
 
-1. **title_filter.positive**: Keywords matching your target roles
-2. **title_filter.negative**: Tech stacks or domains to exclude
-3. **search_queries**: WebSearch queries for job boards (Ashby, Greenhouse, Lever)
-4. **tracked_companies**: Companies to check directly
+- focus areas
+- target locations
+- work modes
+- saved scan profiles
 
-## CV Template (templates/cv-template.html)
+If you want to add a new location or focus area later, add it here instead of
+hardcoding it in scripts.
 
-The HTML template uses these design tokens:
-- **Fonts**: Space Grotesk (headings) + DM Sans (body) -- self-hosted in `fonts/`
-- **Colors**: Cyan primary (`hsl(187,74%,32%)`) + Purple accent (`hsl(270,70%,45%)`)
-- **Layout**: Single-column, ATS-optimized
+## 3. Framing and Narrative: `modes/_profile.md`
 
-To customize fonts/colors, edit the CSS in the template. Update font files in `fonts/` if switching fonts.
+Use `_profile.md` for the softer layer:
 
-## Negotiation Scripts (modes/_shared.md)
+- how your work should be framed
+- role-specific mapping of projects to job families
+- negotiation angles
+- narrative emphasis for tailoring
 
-The negotiation section provides frameworks for salary discussions. Replace the example scripts with your own:
-- Target ranges
-- Geographic arbitrage strategy
-- Pushback responses
+Rule: put personal framing here, not in shared scripts or templates.
 
-## Hooks (Optional)
+## 4. Scanner Configuration: `portals.yml`
 
-Career-ops can integrate with external systems via Claude Code hooks. Example hooks:
+Use `portals.yml` to control where and how the scanner looks:
 
-```json
-{
-  "hooks": {
-    "SessionStart": [{
-      "hooks": [{
-        "type": "command",
-        "command": "echo 'Career-ops session started'"
-      }]
-    }]
-  }
-}
-```
+- `tracked_companies`
+- `search_queries`
+- `title_filter.positive`
+- `title_filter.negative`
 
-Save hooks in `.claude/settings.json`.
+This is where company coverage and title matching should change.
 
-## States (templates/states.yml)
+## 5. Evidence Library: `article-digest.md`
 
-The canonical states rarely need changing. If you add new states, update:
-1. `templates/states.yml`
-2. `normalize-statuses.mjs` (alias mappings)
-3. `modes/_shared.md` (any references)
+Use `article-digest.md` for extra proof points you want the system to reuse:
+
+- shipped projects
+- articles
+- metrics
+- awards
+- speaking / teaching / community proof
+
+## 6. Interview Stories: `interview-prep/story-bank.md`
+
+If you want to keep reusable STAR stories, store them here. Treat it as personal
+working material, not as system logic.
+
+## 7. CV Output Design: `templates/cv-template.html`
+
+If you want to change the HTML/PDF visual design, edit the template here.
+
+Common edits:
+
+- fonts
+- colors
+- spacing
+- section layout
+
+## 8. Canonical States: `templates/states.yml`
+
+Only change this if you really want to rename or add tracker states. If you do,
+also review `normalize-statuses.mjs`.

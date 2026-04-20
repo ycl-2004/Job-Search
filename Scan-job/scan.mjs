@@ -4,8 +4,9 @@
  * scan.mjs — Zero-token portal scanner
  *
  * Fetches Greenhouse, Ashby, and Lever APIs directly, applies title
- * filters from portals.yml, deduplicates against existing history,
- * and appends new offers to pipeline.md + scan-history.tsv.
+ * filters from portals.yml, rebuilds the pending pipeline based on the
+ * latest scan, appends newly discovered offers to scan-history.tsv,
+ * and writes daily per-run scan summaries for human review.
  *
  * Zero Claude API tokens — pure HTTP + JSON.
  *
@@ -25,12 +26,57 @@ const PORTALS_PATH = 'portals.yml';
 const SCAN_HISTORY_PATH = 'data/scan-history.tsv';
 const PIPELINE_PATH = 'data/pipeline.md';
 const APPLICATIONS_PATH = 'data/applications.md';
+const SCAN_RUNS_DIR = 'data/scan-runs';
+const LATEST_SCAN_RUN_PATH = 'data/latest-scan-run.json';
 
 // Ensure required directories exist (fresh setup)
 mkdirSync('data', { recursive: true });
+mkdirSync(SCAN_RUNS_DIR, { recursive: true });
 
 const CONCURRENCY = 10;
 const FETCH_TIMEOUT_MS = 10_000;
+
+function parseCsvList(value) {
+  return String(value || '')
+    .split(',')
+    .map(item => normalizeSpacing(item))
+    .filter(Boolean);
+}
+
+function collectArgValues(args, flag) {
+  const values = [];
+  for (let i = 0; i < args.length; i += 1) {
+    const arg = args[i];
+    if (arg === flag) {
+      if (i + 1 < args.length) {
+        values.push(...parseCsvList(args[i + 1]));
+        i += 1;
+      }
+      continue;
+    }
+    if (arg.startsWith(`${flag}=`)) {
+      values.push(...parseCsvList(arg.split('=', 1)[1] || arg.slice(flag.length + 1)));
+    }
+  }
+  return values;
+}
+
+function readSingleArg(args, flag) {
+  for (let i = 0; i < args.length; i += 1) {
+    const arg = args[i];
+    if (arg === flag) {
+      return i + 1 < args.length ? args[i + 1] : '';
+    }
+    if (arg.startsWith(`${flag}=`)) {
+      return arg.slice(flag.length + 1);
+    }
+  }
+  return '';
+}
+
+function markdownList(values, fallback) {
+  return values.length > 0 ? values.join(', ') : fallback;
+}
 
 // ── API detection ───────────────────────────────────────────────────
 
@@ -122,8 +168,9 @@ async function fetchJson(url) {
 
 // ── Title filter ────────────────────────────────────────────────────
 
-function buildTitleFilter(titleFilter) {
-  const positive = (titleFilter?.positive || []).map(k => k.toLowerCase());
+function buildTitleFilter(titleFilter, positiveOverride = []) {
+  const positiveSource = positiveOverride.length > 0 ? positiveOverride : (titleFilter?.positive || []);
+  const positive = positiveSource.map(k => k.toLowerCase());
   const negative = (titleFilter?.negative || []).map(k => k.toLowerCase());
 
   return (title) => {
@@ -142,16 +189,53 @@ function sanitizeField(value) {
   return normalizeSpacing(value).replace(/\s*\|\s*/g, ' / ');
 }
 
+function looksLikeLocation(value) {
+  const lower = normalizeSpacing(value).toLowerCase();
+  if (!lower) return false;
+  return (
+    lower.includes(',') ||
+    [
+      'remote',
+      'hybrid',
+      'onsite',
+      'on-site',
+      'office',
+      'canada',
+      'united states',
+      'usa',
+      'taiwan',
+      'china',
+      'vancouver',
+      'toronto',
+      'taipei',
+      'new taipei',
+      'san francisco',
+      'seattle',
+      'austin',
+      'beijing',
+      'shanghai',
+      'shenzhen',
+    ].some(keyword => lower.includes(keyword))
+  );
+}
+
 function parsePendingCheckboxLine(rawLine) {
   const line = rawLine.trim();
   if (!line.startsWith('- [ ] ')) return null;
   const payload = line.slice(6).trim();
-  const parts = payload.split('|', 3).map(part => part.trim());
+  const parts = payload.split('|').map(part => part.trim());
   if (parts.length < 3) return null;
+  let location = '';
+  let titleParts = parts.slice(2);
+  if (titleParts.length > 1 && looksLikeLocation(titleParts.at(-1) || '')) {
+    location = sanitizeField(titleParts.at(-1) || '');
+    titleParts = titleParts.slice(0, -1);
+  }
   return {
     url: normalizeSpacing(parts[0]),
     company: sanitizeField(parts[1]),
-    title: sanitizeField(parts.slice(2).join('|')),
+    title: sanitizeField(titleParts.join(' | ')),
+    location,
   };
 }
 
@@ -168,9 +252,139 @@ function parseProcessedCheckboxLine(rawLine) {
   };
 }
 
+function normalizeRoleKey(company, role) {
+  const normalizedCompany = sanitizeField(company).toLowerCase();
+  const normalizedRole = sanitizeField(role).toLowerCase();
+  return `${normalizedCompany}::${normalizedRole}`;
+}
+
+function matchesKeywords(text, keywords) {
+  if (!keywords || keywords.length === 0) return true;
+  const lower = normalizeSpacing(text || '').toLowerCase();
+  return keywords.some(keyword => lower.includes(normalizeSpacing(keyword).toLowerCase()));
+}
+
+function countKeywordMatches(text, keywords) {
+  const lower = normalizeSpacing(text || '').toLowerCase();
+  if (!lower) return 0;
+
+  const matches = new Set();
+  for (const keyword of keywords || []) {
+    const normalizedKeyword = normalizeSpacing(String(keyword || '')).toLowerCase();
+    if (normalizedKeyword && lower.includes(normalizedKeyword)) {
+      matches.add(normalizedKeyword);
+    }
+  }
+  return matches.size;
+}
+
+function remotePriorityFromJob(job) {
+  const lower = normalizeSpacing(`${job.location || ''} ${job.title || ''}`).toLowerCase();
+  if (!lower) {
+    return { bucket: 'unspecified', priority: 1 };
+  }
+
+  if (/\b(on[\s-]?site|in[\s-]?office|office[-\s]?based)\b/.test(lower)) {
+    return { bucket: 'onsite', priority: 0 };
+  }
+  if (/\b(hybrid)\b/.test(lower)) {
+    return { bucket: 'hybrid', priority: 2 };
+  }
+  if (/\b(remote|distributed|work from home|wfh|fully remote|100% remote)\b/.test(lower)) {
+    if (/\b(global|anywhere|worldwide|work from anywhere)\b/.test(lower)) {
+      return { bucket: 'remote-global', priority: 5 };
+    }
+    if (/\b(emea|europe|eu|uk|canada|north america|na|apac|latam)\b/.test(lower)) {
+      return { bucket: 'remote-regional', priority: 4 };
+    }
+    return { bucket: 'remote', priority: 3 };
+  }
+
+  return { bucket: 'unspecified', priority: 1 };
+}
+
+function scoreOffer(job, titleFilter) {
+  const keywordHits = countKeywordMatches(job.title, titleFilter?.positive || []);
+  const seniorityHits = countKeywordMatches(job.title, titleFilter?.seniority_boost || []);
+  const remote = remotePriorityFromJob(job);
+  const priorityScore = remote.priority * 100 + keywordHits * 10 + seniorityHits * 3;
+
+  return {
+    ...job,
+    keywordHits,
+    seniorityHits,
+    remoteBucket: remote.bucket,
+    remotePriority: remote.priority,
+    priorityScore,
+  };
+}
+
+function compareOffers(a, b) {
+  return (
+    b.priorityScore - a.priorityScore ||
+    b.remotePriority - a.remotePriority ||
+    b.keywordHits - a.keywordHits ||
+    b.seniorityHits - a.seniorityHits ||
+    a.company.localeCompare(b.company) ||
+    a.title.localeCompare(b.title) ||
+    a.url.localeCompare(b.url)
+  );
+}
+
+function formatPendingLine(entry) {
+  const base = `- [ ] ${normalizeSpacing(entry.url)} | ${sanitizeField(entry.company)} | ${sanitizeField(entry.title)}`;
+  if (entry.location) {
+    return `${base} | ${sanitizeField(entry.location)}`;
+  }
+  return base;
+}
+
+function loadPipelineState() {
+  const state = {
+    pendingEntries: [],
+    processedLines: [],
+    processedUrls: new Set(),
+    processedRoleKeys: new Set(),
+  };
+
+  if (!existsSync(PIPELINE_PATH)) {
+    return state;
+  }
+
+  let section = '';
+  const lines = readFileSync(PIPELINE_PATH, 'utf-8').split('\n');
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (line.startsWith('## ')) {
+      section = line.toLowerCase();
+      continue;
+    }
+    if (!line) continue;
+
+    if (section.startsWith('## pendientes')) {
+      const pendingEntry = parsePendingCheckboxLine(rawLine);
+      if (pendingEntry) {
+        state.pendingEntries.push(pendingEntry);
+      }
+      continue;
+    }
+
+    if (section.startsWith('## procesadas')) {
+      state.processedLines.push(rawLine.trimEnd());
+      const processedEntry = parseProcessedCheckboxLine(rawLine);
+      if (processedEntry) {
+        state.processedUrls.add(processedEntry.url);
+        state.processedRoleKeys.add(normalizeRoleKey(processedEntry.company, processedEntry.title));
+      }
+    }
+  }
+
+  return state;
+}
+
 // ── Dedup ───────────────────────────────────────────────────────────
 
-function loadSeenUrls() {
+function loadHistoricalUrls() {
   const seen = new Set();
 
   // scan-history.tsv
@@ -182,7 +396,8 @@ function loadSeenUrls() {
     }
   }
 
-  // pipeline.md — extract URLs from checkbox lines
+  // pipeline.md — extract URLs from checkbox lines so pending jobs do not look
+  // brand-new when we rebuild the queue.
   if (existsSync(PIPELINE_PATH)) {
     const text = readFileSync(PIPELINE_PATH, 'utf-8');
     for (const match of text.matchAll(/- \[[ x]\] (https?:\/\/\S+)/g)) {
@@ -201,73 +416,53 @@ function loadSeenUrls() {
   return seen;
 }
 
-function loadSeenCompanyRoles() {
-  const seen = new Set();
+function loadTrackedUrls(pipelineState) {
+  const tracked = new Set(pipelineState.processedUrls);
 
-  const addSeenCompanyRole = (company, role) => {
-    const normalizedCompany = company.toLowerCase().replace(/\s+/g, ' ').trim();
-    const normalizedRole = role.toLowerCase().replace(/\s+/g, ' ').trim();
-    if (normalizedCompany && normalizedRole && normalizedCompany !== 'company') {
-      seen.add(`${normalizedCompany}::${normalizedRole}`);
-    }
-  };
-
-  if (existsSync(PIPELINE_PATH)) {
-    const lines = readFileSync(PIPELINE_PATH, 'utf-8').split('\n');
-    for (const rawLine of lines) {
-      const pendingEntry = parsePendingCheckboxLine(rawLine);
-      if (pendingEntry) {
-        addSeenCompanyRole(pendingEntry.company, pendingEntry.title);
-        continue;
-      }
-      const processedEntry = parseProcessedCheckboxLine(rawLine);
-      if (processedEntry) {
-        addSeenCompanyRole(processedEntry.company, processedEntry.title);
-      }
+  if (existsSync(APPLICATIONS_PATH)) {
+    const text = readFileSync(APPLICATIONS_PATH, 'utf-8');
+    for (const match of text.matchAll(/https?:\/\/[^\s|)]+/g)) {
+      tracked.add(match[0]);
     }
   }
+
+  return tracked;
+}
+
+function loadTrackedCompanyRoles(pipelineState) {
+  const tracked = new Set(pipelineState.processedRoleKeys);
 
   if (existsSync(APPLICATIONS_PATH)) {
     const text = readFileSync(APPLICATIONS_PATH, 'utf-8');
     // Parse markdown table rows: | # | Date | Company | Role | ...
     for (const match of text.matchAll(/\|[^|]+\|[^|]+\|\s*([^|]+)\s*\|\s*([^|]+)\s*\|/g)) {
-      addSeenCompanyRole(match[1], match[2]);
+      if (normalizeSpacing(match[1]).toLowerCase() === 'company') continue;
+      tracked.add(normalizeRoleKey(match[1], match[2]));
     }
   }
-  return seen;
+
+  return tracked;
 }
 
 // ── Pipeline writer ─────────────────────────────────────────────────
 
-function appendToPipeline(offers) {
-  if (offers.length === 0) return;
+function rewritePipeline({ manualPendingEntries, scannedOffers, processedLines }) {
+  const pendingLines = [
+    ...manualPendingEntries.map(formatPendingLine),
+    ...scannedOffers.map(formatPendingLine),
+  ];
+  const content = [
+    '## Pendientes',
+    '',
+    ...pendingLines,
+    '',
+    '## Procesadas',
+    '',
+    ...processedLines,
+    '',
+  ].join('\n');
 
-  let text = readFileSync(PIPELINE_PATH, 'utf-8');
-
-  // Find "## Pendientes" section and append after it
-  const marker = '## Pendientes';
-  const idx = text.indexOf(marker);
-  if (idx === -1) {
-    // No Pendientes section — append at end before Procesadas
-    const procIdx = text.indexOf('## Procesadas');
-    const insertAt = procIdx === -1 ? text.length : procIdx;
-    const block = `\n${marker}\n\n` + offers.map(o =>
-      `- [ ] ${o.url} | ${sanitizeField(o.company)} | ${sanitizeField(o.title)}`
-    ).join('\n') + '\n\n';
-    text = text.slice(0, insertAt) + block + text.slice(insertAt);
-  } else {
-    // Find the end of existing Pendientes content (next ## or end)
-    const afterMarker = idx + marker.length;
-    const nextSection = text.indexOf('\n## ', afterMarker);
-    const insertAt = nextSection === -1 ? text.length : nextSection;
-
-    const block = '\n' + offers.map(o =>
-      `- [ ] ${o.url} | ${sanitizeField(o.company)} | ${sanitizeField(o.title)}`
-    ).join('\n') + '\n';
-    text = text.slice(0, insertAt) + block + text.slice(insertAt);
-  }
-
-  writeFileSync(PIPELINE_PATH, text, 'utf-8');
+  writeFileSync(PIPELINE_PATH, content, 'utf-8');
 }
 
 function appendToScanHistory(offers, date) {
@@ -281,6 +476,59 @@ function appendToScanHistory(offers, date) {
   ).join('\n') + '\n';
 
   appendFileSync(SCAN_HISTORY_PATH, lines, 'utf-8');
+}
+
+function scanRunLogPath(date) {
+  return `${SCAN_RUNS_DIR}/${date}.md`;
+}
+
+function appendDailyScanRun(summary) {
+  const logPath = scanRunLogPath(summary.date);
+  if (!existsSync(logPath)) {
+    writeFileSync(logPath, `# Scan Runs — ${summary.date}\n\n`, 'utf-8');
+  }
+
+  const lines = [
+    `## ${summary.time || 'Latest run'} — ${summary.target_label || 'Unnamed target profile'}`,
+    '',
+    `- Focus areas: ${markdownList(summary.focus_labels, 'Not set')}`,
+    `- Locations: ${markdownList(summary.location_labels, 'Not set')}`,
+    `- Work modes: ${markdownList(summary.work_mode_labels, 'Not set')}`,
+    '',
+    '### Matches',
+    '',
+    ...(summary.matches.length > 0
+      ? summary.matches.map(match => `- ${match.company} | ${match.title} | ${match.location || 'N/A'} | score ${match.priorityScore}`)
+      : ['- None']),
+    '',
+    '### Totals',
+    '',
+    `- Companies scanned: ${summary.companies_scanned}`,
+    `- Total jobs found: ${summary.total_jobs_found}`,
+    `- Filtered by title: ${summary.filtered_by_title}`,
+    `- Filtered by location: ${summary.filtered_by_location}`,
+    `- Filtered by work mode: ${summary.filtered_by_work_mode}`,
+    `- Duplicates skipped: ${summary.duplicates}`,
+    `- New unique offers added to history: ${summary.new_offers_discovered}`,
+    `- Current scan matches: ${summary.scored_scan_matches}`,
+    `- Pending queue rebuilt: ${summary.pending_queue_rebuilt}`,
+    '',
+    '### Errors',
+    '',
+    ...(summary.errors.length > 0
+      ? summary.errors.map(error => `- ${error.company}: ${error.error}`)
+      : ['- None']),
+    '',
+    '---',
+    '',
+  ];
+
+  appendFileSync(logPath, lines.join('\n'), 'utf-8');
+  return logPath;
+}
+
+function writeLatestScanRunSummary(summary) {
+  writeFileSync(LATEST_SCAN_RUN_PATH, `${JSON.stringify(summary, null, 2)}\n`, 'utf-8');
 }
 
 // ── Parallel fetch with concurrency limit ───────────────────────────
@@ -308,6 +556,15 @@ async function main() {
   const dryRun = args.includes('--dry-run');
   const companyFlag = args.indexOf('--company');
   const filterCompany = companyFlag !== -1 ? args[companyFlag + 1]?.toLowerCase() : null;
+  const runtimeTargeting = {
+    focusKeywords: collectArgValues(args, '--focus-keywords'),
+    focusLabels: collectArgValues(args, '--focus-labels'),
+    locationKeywords: collectArgValues(args, '--location-keywords'),
+    locationLabels: collectArgValues(args, '--location-labels'),
+    workModeKeywords: collectArgValues(args, '--work-mode-keywords'),
+    workModeLabels: collectArgValues(args, '--work-mode-labels'),
+    targetLabel: normalizeSpacing(readSingleArg(args, '--target-label')),
+  };
 
   // 1. Read portals.yml
   if (!existsSync(PORTALS_PATH)) {
@@ -317,7 +574,10 @@ async function main() {
 
   const config = parseYaml(readFileSync(PORTALS_PATH, 'utf-8'));
   const companies = config.tracked_companies || [];
-  const titleFilter = buildTitleFilter(config.title_filter);
+  const effectivePositiveKeywords = runtimeTargeting.focusKeywords.length > 0
+    ? runtimeTargeting.focusKeywords
+    : (config.title_filter?.positive || []);
+  const titleFilter = buildTitleFilter(config.title_filter, effectivePositiveKeywords);
 
   // 2. Filter to enabled companies with detectable APIs
   const targets = companies
@@ -331,16 +591,25 @@ async function main() {
   console.log(`Scanning ${targets.length} companies via API (${skippedCount} skipped — no API detected)`);
   if (dryRun) console.log('(dry run — no files will be written)\n');
 
-  // 3. Load dedup sets
-  const seenUrls = loadSeenUrls();
-  const seenCompanyRoles = loadSeenCompanyRoles();
+  // 3. Load pipeline + dedup sets
+  const pipelineState = loadPipelineState();
+  const historicalUrls = loadHistoricalUrls();
+  const trackedUrls = loadTrackedUrls(pipelineState);
+  const trackedCompanyRoles = loadTrackedCompanyRoles(pipelineState);
+  const manualPendingEntries = pipelineState.pendingEntries.filter(entry => !/^https?:\/\//i.test(entry.url));
+  const scannedUrlsThisRun = new Set();
+  const scannedRoleKeysThisRun = new Set();
 
   // 4. Fetch all APIs
   const date = new Date().toISOString().slice(0, 10);
   let totalFound = 0;
   let totalFiltered = 0;
+  let totalLocationFiltered = 0;
+  let totalWorkModeFiltered = 0;
   let totalDupes = 0;
-  const newOffers = [];
+  let totalNewToHistory = 0;
+  const historyAdds = [];
+  const scoredOffers = [];
   const errors = [];
 
   const tasks = targets.map(company => async () => {
@@ -355,19 +624,45 @@ async function main() {
           totalFiltered++;
           continue;
         }
-        if (seenUrls.has(job.url)) {
+        if (!matchesKeywords(job.location, runtimeTargeting.locationKeywords)) {
+          totalLocationFiltered++;
+          continue;
+        }
+        if (!matchesKeywords(`${job.location || ''} ${job.title || ''}`, runtimeTargeting.workModeKeywords)) {
+          totalWorkModeFiltered++;
+          continue;
+        }
+        const key = normalizeRoleKey(job.company, job.title);
+        if (trackedUrls.has(job.url)) {
           totalDupes++;
           continue;
         }
-        const key = `${sanitizeField(job.company).toLowerCase()}::${sanitizeField(job.title).toLowerCase()}`;
-        if (seenCompanyRoles.has(key)) {
+        if (trackedCompanyRoles.has(key)) {
           totalDupes++;
           continue;
         }
-        // Mark as seen to avoid intra-scan dupes
-        seenUrls.add(job.url);
-        seenCompanyRoles.add(key);
-        newOffers.push({ ...job, source: `${type}-api` });
+        if (scannedUrlsThisRun.has(job.url) || scannedRoleKeysThisRun.has(key)) {
+          totalDupes++;
+          continue;
+        }
+
+        scannedUrlsThisRun.add(job.url);
+        scannedRoleKeysThisRun.add(key);
+
+        const scoredJob = scoreOffer(
+          { ...job, source: `${type}-api` },
+          {
+            ...config.title_filter,
+            positive: effectivePositiveKeywords,
+          },
+        );
+        scoredOffers.push(scoredJob);
+
+        if (!historicalUrls.has(job.url)) {
+          historicalUrls.add(job.url);
+          totalNewToHistory++;
+          historyAdds.push(scoredJob);
+        }
       }
     } catch (err) {
       errors.push({ company: company.name, error: err.message });
@@ -375,22 +670,73 @@ async function main() {
   });
 
   await parallelFetch(tasks, CONCURRENCY);
+  scoredOffers.sort(compareOffers);
 
   // 5. Write results
-  if (!dryRun && newOffers.length > 0) {
-    appendToPipeline(newOffers);
-    appendToScanHistory(newOffers, date);
+  if (!dryRun) {
+    rewritePipeline({
+      manualPendingEntries,
+      scannedOffers: scoredOffers,
+      processedLines: pipelineState.processedLines,
+    });
+  }
+  if (!dryRun && historyAdds.length > 0) {
+    appendToScanHistory(historyAdds, date);
+  }
+
+  const completedAt = new Date();
+  const time = completedAt.toLocaleTimeString('en-GB', { hour12: false });
+  const summary = {
+    date,
+    time,
+    target_label: runtimeTargeting.targetLabel || 'Ad hoc scan',
+    focus_labels: runtimeTargeting.focusLabels.length > 0 ? runtimeTargeting.focusLabels : runtimeTargeting.focusKeywords,
+    location_labels: runtimeTargeting.locationLabels.length > 0 ? runtimeTargeting.locationLabels : runtimeTargeting.locationKeywords,
+    work_mode_labels: runtimeTargeting.workModeLabels.length > 0 ? runtimeTargeting.workModeLabels : runtimeTargeting.workModeKeywords,
+    focus_keywords: runtimeTargeting.focusKeywords,
+    location_keywords: runtimeTargeting.locationKeywords,
+    work_mode_keywords: runtimeTargeting.workModeKeywords,
+    companies_scanned: targets.length,
+    total_jobs_found: totalFound,
+    filtered_by_title: totalFiltered,
+    filtered_by_location: totalLocationFiltered,
+    filtered_by_work_mode: totalWorkModeFiltered,
+    duplicates: totalDupes,
+    new_offers_discovered: totalNewToHistory,
+    pending_queue_rebuilt: manualPendingEntries.length + scoredOffers.length,
+    scored_scan_matches: scoredOffers.length,
+    matches: scoredOffers.map(offer => ({
+      company: offer.company,
+      title: offer.title,
+      location: offer.location || '',
+      priorityScore: offer.priorityScore,
+      url: offer.url,
+    })),
+    errors,
+    daily_log_path: scanRunLogPath(date),
+  };
+
+  if (!dryRun) {
+    appendDailyScanRun(summary);
+    writeLatestScanRunSummary(summary);
   }
 
   // 6. Print summary
   console.log(`\n${'━'.repeat(45)}`);
   console.log(`Portal Scan — ${date}`);
   console.log(`${'━'.repeat(45)}`);
+  if (runtimeTargeting.targetLabel) {
+    console.log(`Target profile:        ${runtimeTargeting.targetLabel}`);
+  }
   console.log(`Companies scanned:     ${targets.length}`);
   console.log(`Total jobs found:      ${totalFound}`);
   console.log(`Filtered by title:     ${totalFiltered} removed`);
+  console.log(`Filtered by location:  ${totalLocationFiltered} removed`);
+  console.log(`Filtered by work mode: ${totalWorkModeFiltered} removed`);
   console.log(`Duplicates:            ${totalDupes} skipped`);
-  console.log(`New offers added:      ${newOffers.length}`);
+  console.log(`New offers discovered: ${totalNewToHistory}`);
+  console.log(`Pending queue rebuilt: ${manualPendingEntries.length + scoredOffers.length}`);
+  console.log(`Scored scan matches:   ${scoredOffers.length}`);
 
   if (errors.length > 0) {
     console.log(`\nErrors (${errors.length}):`);
@@ -399,20 +745,22 @@ async function main() {
     }
   }
 
-  if (newOffers.length > 0) {
-    console.log('\nNew offers:');
-    for (const o of newOffers) {
-      console.log(`  + ${o.company} | ${o.title} | ${o.location || 'N/A'}`);
-    }
-    if (dryRun) {
-      console.log('\n(dry run — run without --dry-run to save results)');
-    } else {
-      console.log(`\nResults saved to ${PIPELINE_PATH} and ${SCAN_HISTORY_PATH}`);
+  if (scoredOffers.length > 0) {
+    console.log('\nPending order after scoring:');
+    for (const o of scoredOffers) {
+      console.log(`  + ${o.company} | ${o.title} | ${o.location || 'N/A'} | score ${o.priorityScore}`);
     }
   }
 
-  console.log(`\n→ Run /career-ops pipeline to evaluate new offers.`);
-  console.log('→ Share results and get help: https://discord.gg/8pRpHETxa4');
+  if (dryRun) {
+    console.log('\n(dry run — run without --dry-run to save results)');
+  } else {
+    console.log(`\nResults saved to ${PIPELINE_PATH}, ${summary.daily_log_path}, and ${LATEST_SCAN_RUN_PATH}`);
+    console.log(`Machine dedup history kept in ${SCAN_HISTORY_PATH}`);
+  }
+
+  console.log('\n→ Use Task 5 in the main terminal workflow to process a pending job.');
+  console.log('→ Open Task 5 status or outputs if you want to review the latest scan summary.');
 }
 
 main().catch(err => {
